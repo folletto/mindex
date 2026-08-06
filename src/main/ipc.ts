@@ -27,7 +27,7 @@ import {
   setJournalModeOverride,
 } from './settings.js';
 import type { Session } from './session.js';
-import { slugify } from '../shared/slug.js';
+import { FALLBACK_FILENAME, sanitizeFilename } from '../shared/filenames.js';
 import type {
   FieldType,
   FieldValue,
@@ -75,10 +75,16 @@ export function registerIpc(context: IpcContext): void {
 
   const announce = () => broadcast('library:changed', state());
 
-  /** Open a folder as the current library and remember it. */
-  const adopt = (path: string): LibraryChooseResult => {
+  /**
+   * Open a folder as the current library and remember it.
+   *
+   * `initialize` is passed only by callers that have already classified the
+   * folder as empty or as a library. Defaulting it on would mean creating a
+   * fresh database inside a synced library whose files are still downloading.
+   */
+  const adopt = (path: string, options: { initialize?: boolean } = {}): LibraryChooseResult => {
     try {
-      session.open(path, { journalMode: journalModeOverrideFor(path) });
+      session.open(path, { journalMode: journalModeOverrideFor(path), initialize: options.initialize });
       rememberLibrary(path);
       announce();
       return { ok: true, path };
@@ -116,12 +122,18 @@ export function registerIpc(context: IpcContext): void {
     const writable = probeWritable(path);
     if (!writable.ok) return { ok: false, error: `Mindex cannot write to that folder: ${writable.reason}` };
 
-    return adopt(path);
+    // The folder is empty or is already a library, and the user just picked it
+    // in a dialog — this is exactly the case initialising is for.
+    return adopt(path, { initialize: classification.kind === 'empty' });
   });
 
   handle('library:create', (parentPath: string, name: string): LibraryChooseResult => {
     try {
-      const library = createLibraryIn(parentPath, slugify(name) === 'item' ? 'Mindex Catalogue' : name);
+      // The name comes from the renderer, so it is reduced to a single safe
+      // path segment before it is joined onto anything — otherwise "../../"
+      // would create a library wherever it liked.
+      const folderName = sanitizeFilename(name);
+      const library = createLibraryIn(parentPath, folderName === FALLBACK_FILENAME ? 'Mindex Catalogue' : folderName);
       const path = library.paths.root;
       library.close();
       return adopt(path);

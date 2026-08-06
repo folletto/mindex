@@ -19,10 +19,10 @@ export default defineConfig({
       include: ['src/main/**/*.ts', 'src/shared/**/*.ts'],
       exclude: [
         // Electron entry points: covered by the Playwright suite, not by line
-        // counting against a headless main process.
+        // counting against a headless main process. ipc.ts is deliberately not
+        // here — it is covered by tests/integration/ipc.test.ts.
         'src/main/index.ts',
         'src/main/window.ts',
-        'src/main/ipc.ts',
         'src/main/menu.ts',
         'src/main/settings.ts',
         'src/main/dialogs.ts',
