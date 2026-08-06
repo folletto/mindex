@@ -171,7 +171,11 @@ an app that meets a library from a newer version refuses to write to it rather t
 
 `npm version patch|minor|major` and push. A workflow turns the version bump into a `v*.*.*` tag; the
 tag reruns the full CI matrix and, only if it is green, builds and publishes installers to GitHub
-Releases. The download page reads the releases API at load time, so it never needs redeploying.
+Releases, then re-runs the `@smoke` tests against the packaged binary. The download page reads the
+releases API at load time, so it never needs redeploying.
+
+One-time repository setup: under **Settings → Pages**, set the source to **GitHub Actions**, or the
+`pages.yml` workflow will fail on its first run.
 
 ## Licence
 
