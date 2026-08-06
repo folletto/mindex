@@ -40,14 +40,17 @@ const TRANSLITERATIONS: Record<string, string> = {
   ı: 'i',
   İ: 'i',
   ĸ: 'k',
-  '№': 'no',
-  '€': 'eur',
-  '£': 'gbp',
-  '$': 'usd',
-  '&': 'and',
-  '@': 'at',
-  '%': 'pct',
-  '+': 'plus',
+  // Symbols expand to words wrapped in separators, so "C++" reads as
+  // "c-plus-plus" rather than "cplusplus". The surrounding dashes are collapsed
+  // and trimmed a few steps later.
+  '№': '-no-',
+  '€': '-eur-',
+  '£': '-gbp-',
+  '$': '-usd-',
+  '&': '-and-',
+  '@': '-at-',
+  '%': '-pct-',
+  '+': '-plus-',
 };
 
 /**
