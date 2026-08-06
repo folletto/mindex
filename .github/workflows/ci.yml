@@ -33,9 +33,6 @@ jobs:
           node-version: 22
           cache: npm
 
-      # No electron-builder rebuild here on purpose: these tests run under plain
-      # Node, so better-sqlite3 must keep its Node ABI build. The packaging job
-      # does its own rebuild against Electron's ABI.
       - run: npm ci
 
       - name: Typecheck
@@ -73,11 +70,6 @@ jobs:
           cache: npm
 
       - run: npm ci
-
-      # A separate job from `test` precisely because this one needs the Electron
-      # ABI build of better-sqlite3, which would break the Node-side tests.
-      - name: Rebuild native modules against Electron
-        run: npm run rebuild:electron
 
       - run: npm run build
 

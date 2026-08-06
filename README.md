@@ -91,22 +91,15 @@ Mindex currently points you at the download page rather than updating itself.
 
 ```sh
 npm install
-npm run rebuild:electron   # see the note below
 npm run dev
 ```
 
-### The one wrinkle: better-sqlite3 is a native module
-
-It has to be compiled against whichever ABI is going to load it, and Node and Electron do not share
-one. So there is a deliberate switch rather than a `postinstall` that would quietly break one of them:
-
-| You want to… | Run |
-|---|---|
-| run the tests (they use plain Node) | `npm run rebuild:node` |
-| run or package the app | `npm run rebuild:electron` |
-
-A fresh `npm ci` leaves you in the Node state, which is what CI's test job wants. The packaging job
-rebuilds for Electron itself, and `electron-builder` does it again at package time.
+That is the whole setup. `better-sqlite3` is a native module, but it ships N-API prebuilds, which are
+ABI-stable across both Node and Electron — so the tests (plain Node) and the app (Electron) load the
+same binary, with no rebuild step and no `postinstall` that could quietly break one of them.
+`electron-builder` is configured with `npmRebuild: false` for the same reason: compiling from source
+against Electron headers would add nothing but a way for the build to fail. The one thing that does
+matter is `asarUnpack`, since a `.node` binary cannot be loaded from inside an asar archive.
 
 ### Commands
 
@@ -116,7 +109,7 @@ rebuilds for Electron itself, and `electron-builder` does it again at package ti
 | `npm run build` | Typecheck, then build to `out/` |
 | `npm test` | Unit, property, integration and concurrency suites |
 | `npm run test:coverage` | The same, with the 90% gate on `src/main` and `src/shared` |
-| `npm run test:e2e` | Playwright against the built app (needs `rebuild:electron` first) |
+| `npm run test:e2e` | Playwright against the built app (run `npm run build` first) |
 | `npm run lint` | ESLint, including the rules that keep the renderer sandboxed |
 | `npm run dist` | Build installers into `release/` |
 
@@ -141,13 +134,14 @@ before it is used.
 
 ### Testing
 
-Testing is a deliverable here, not a milestone. Around 390 tests, in layers:
+Testing is a deliverable here, not a milestone. Around 435 tests, in layers:
 
 | Layer | What it covers |
 |---|---|
 | Unit + property (`fast-check`) | slug generation, filename sanitisation, path containment, retry backoff |
 | Integration | real SQLite on a real temp folder — repositories, migrations, constraints, compensating writes |
 | Concurrency | **real child processes** writing to one shared library, on both journal modes |
+| IPC contract | every handler against a real temp library, with Electron mocked and nothing else |
 | End-to-end | Playwright driving the built Electron app |
 
 Two areas get the heaviest coverage because they are the ones that would hurt most if they broke

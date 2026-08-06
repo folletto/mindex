@@ -12,13 +12,14 @@ files:
   - '!**/*.map'
   - '!**/{.eslintrc,.editorconfig,.prettierrc,tsconfig*.json}'
 
-# better-sqlite3 is a native module: it has to stay outside the asar archive so
-# the .node binary is loadable, and it must be rebuilt against Electron's ABI,
-# which npmRebuild does at package time.
+# better-sqlite3 is native, so its .node binary has to stay outside the asar
+# archive to be loadable. It ships N-API prebuilds, which are ABI-stable across
+# both Node and Electron, so there is nothing to rebuild -- and compiling from
+# source against Electron headers would only add a way for the build to fail.
 asar: true
 asarUnpack:
   - '**/node_modules/better-sqlite3/**'
-npmRebuild: true
+npmRebuild: false
 
 # The library folder is the source of truth, so an uninstall must never take a
 # user's catalogue with it. Nothing outside the app directory is ours to remove.

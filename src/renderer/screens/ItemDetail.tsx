@@ -45,15 +45,37 @@ export function ItemDetail({ itemId, fields, dataVersion, readOnly, onTrashed, o
   const base = useRef<Draft | null>(null);
   const dirty = useRef(false);
 
+  /**
+   * Mirrors of the two pieces of state that `save` needs.
+   *
+   * A blur can land in the same tick as the keystroke before it, ahead of the
+   * re-render — type and tab away quickly and a `save` reading `draft` from its
+   * closure would write the *previous* value and then mark the form clean,
+   * losing the edit. Refs are always current, so the save always writes what is
+   * actually in the form.
+   */
+  const draftRef = useRef<Draft | null>(null);
+  const itemRef = useRef<Item | null>(null);
+
+  const applyItem = useCallback((next: Item | null) => {
+    itemRef.current = next;
+    setItem(next);
+  }, []);
+
+  const applyDraft = useCallback((next: Draft | null) => {
+    draftRef.current = next;
+    setDraft(next);
+  }, []);
+
   const load = useCallback(async () => {
     const next = await api.items.get(itemId);
-    setItem(next);
+    applyItem(next);
     if (next && !dirty.current) {
       const fresh = draftOf(next);
-      setDraft(fresh);
+      applyDraft(fresh);
       base.current = fresh;
     }
-  }, [itemId]);
+  }, [itemId, applyItem, applyDraft]);
 
   /**
    * Load on mount, and again whenever anything commits — this window's own
@@ -71,22 +93,24 @@ export function ItemDetail({ itemId, fields, dataVersion, readOnly, onTrashed, o
   }, [dataVersion, load]);
 
   const save = useCallback(async () => {
-    if (!item || !draft || !dirty.current || readOnly) return;
+    const current = itemRef.current;
+    const pending = draftRef.current;
+    if (!current || !pending || !dirty.current || readOnly) return;
     dirty.current = false;
     setError(null);
 
     const patch: ItemPatch = {
-      name: draft.name,
-      manufacturer: draft.manufacturer,
-      notes: draft.notes,
+      name: pending.name,
+      manufacturer: pending.manufacturer,
+      notes: pending.notes,
     };
 
     try {
       const result = await api.items.update({
-        id: item.id,
-        rev: item.rev,
+        id: current.id,
+        rev: current.rev,
         patch,
-        fields: draft.fields,
+        fields: pending.fields,
         base: base.current
           ? {
               name: base.current.name,
@@ -102,7 +126,7 @@ export function ItemDetail({ itemId, fields, dataVersion, readOnly, onTrashed, o
         return;
       }
 
-      setItem(result.item);
+      applyItem(result.item);
       base.current = draftOf(result.item);
       setSaved(true);
       setTimeout(() => setSaved(false), 1500);
@@ -110,30 +134,32 @@ export function ItemDetail({ itemId, fields, dataVersion, readOnly, onTrashed, o
     } catch (caught) {
       setError((caught as Error).message);
     }
-  }, [item, draft, readOnly, onChanged]);
+  }, [readOnly, onChanged, applyItem]);
 
   const edit = (patch: Partial<Draft>) => {
     dirty.current = true;
-    setDraft((current) => (current ? { ...current, ...patch } : current));
+    if (draftRef.current) applyDraft({ ...draftRef.current, ...patch });
   };
 
   const editField = (key: string, value: FieldValue) => {
     dirty.current = true;
-    setDraft((current) => (current ? { ...current, fields: { ...current.fields, [key]: value } } : current));
+    if (draftRef.current) {
+      applyDraft({ ...draftRef.current, fields: { ...draftRef.current.fields, [key]: value } });
+    }
   };
 
   const resolveConflict = async (keep: 'mine' | 'theirs') => {
     if (!conflict) return;
     if (keep === 'theirs') {
       const fresh = draftOf(conflict.current);
-      setItem(conflict.current);
-      setDraft(fresh);
+      applyItem(conflict.current);
+      applyDraft(fresh);
       base.current = fresh;
       setConflict(null);
       return;
     }
     // Keep mine: rebase onto what is stored now and save again.
-    setItem(conflict.current);
+    applyItem(conflict.current);
     base.current = draftOf(conflict.current);
     setConflict(null);
     dirty.current = true;

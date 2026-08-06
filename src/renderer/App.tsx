@@ -43,44 +43,48 @@ export function App() {
 
   const bump = useCallback(() => setLocalVersion((current) => current + 1), []);
 
-  useEffect(() => {
-    if (!ready) return;
-    let cancelled = false;
+  /**
+   * Reload the list. Returns the rows so a caller can select something it just
+   * created without waiting for a render to come round.
+   */
+  const loadItems = useCallback(async (): Promise<ItemRow[]> => {
     // Only show "Loading…" if the query is actually slow. Most are instant, and
     // a flash of loading state on every keystroke reads as jitter.
-    const slow = setTimeout(() => {
-      if (!cancelled) setLoading(true);
-    }, 120);
-
-    void api.items
-      .list({ query: debouncedQuery, sort, direction, limit: 500 })
-      .then((next) => {
-        if (cancelled) return;
-        setItems(next);
-        setLoading(false);
-      })
-      .catch(() => {
-        if (!cancelled) setLoading(false);
-      })
-      .finally(() => clearTimeout(slow));
-
-    return () => {
-      cancelled = true;
+    const slow = setTimeout(() => setLoading(true), 120);
+    try {
+      const next = await api.items.list({ query: debouncedQuery, sort, direction, limit: 500 });
+      setItems(next);
+      return next;
+    } finally {
       clearTimeout(slow);
-    };
-  }, [ready, debouncedQuery, sort, direction, dataVersion, localVersion]);
+      setLoading(false);
+    }
+  }, [debouncedQuery, sort, direction]);
 
-  // The selection follows the list rather than being corrected after the fact:
-  // an id that has just been filtered out or trashed simply is not the selection
-  // any more, and there is no intermediate render where it still is.
-  const selected = selectedId && items.some((item) => item.id === selectedId) ? selectedId : (items[0]?.id ?? null);
+  useEffect(() => {
+    if (!ready) return;
+    void loadItems();
+  }, [ready, loadItems, dataVersion, localVersion]);
+
+  /**
+   * An explicit selection always wins; the top of the list is only a fallback.
+   *
+   * Deliberately not "the selected id, but only if it is in the current list":
+   * that version hands the detail pane back to the previous item for the render
+   * between creating an item and the list catching up, and anything typed in
+   * that window goes to the wrong record. The detail pane loads by id over IPC,
+   * so it never needed the row to be in `items` anyway. The places where a
+   * selection genuinely stops making sense — trashing it, changing the search —
+   * clear it below, where the intent is obvious.
+   */
+  const selected = selectedId ?? items[0]?.id ?? null;
 
   const createItem = useCallback(async () => {
     const item = await api.items.create({ name: 'New item' });
-    bump();
     setView('items');
     setSelectedId(item.id);
-  }, [bump]);
+    await loadItems();
+  }, [loadItems]);
 
   useEffect(() => {
     if (!ready) return;
@@ -109,12 +113,17 @@ export function App() {
   }, [toast]);
 
   const onTrashed = (item: Item) => {
+    // The item is gone from the list, so the selection goes with it and the
+    // fallback picks whatever is now at the top.
+    setSelectedId(null);
     bump();
     setToast({
       message: `“${item.name}” moved to the trash.`,
       undo: () => {
-        void api.items.restore({ id: item.id }).then(() => {
-          bump();
+        void api.items.restore({ id: item.id }).then(async () => {
+          // Same ordering as createItem: the row has to be back in the list
+          // before it can be the selection.
+          await loadItems();
           setSelectedId(item.id);
           setToast(null);
         });
@@ -169,7 +178,11 @@ export function App() {
               sort={sort}
               direction={direction}
               loading={loading}
-              onQueryChange={setQuery}
+              onQueryChange={(next) => {
+                setQuery(next);
+                // A selection the search has filtered away is not a selection.
+                setSelectedId(null);
+              }}
               onSortChange={(nextSort, nextDirection) => {
                 setSort(nextSort);
                 setDirection(nextDirection);

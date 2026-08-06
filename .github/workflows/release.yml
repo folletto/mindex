@@ -20,7 +20,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # No cross-compiling: better-sqlite3 is native, so each OS builds its own.
+        # No cross-compiling: the macOS installers must be built on macOS and
+        # the Windows installer on Windows.
         os: [macos-latest, windows-latest]
 
     steps:

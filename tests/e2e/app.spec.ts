@@ -3,11 +3,13 @@
  *
  * These drive the built `out/` bundle, so they exercise the parts unit tests
  * cannot: the preload bridge, the IPC round trip, and the renderer's sandbox.
+ * The first thing this suite ever caught was the preload failing to load at
+ * all, which no amount of main-process testing would have found.
  *
  * The folder picker is a native dialog, which Playwright cannot click. Rather
  * than mocking the app, each test points MINDEX_LIBRARY at a temp folder that
- * the main process adopts on launch — the same code path as a chosen folder,
- * minus the dialog.
+ * the main process adopts on launch — the same open-or-initialise code path a
+ * chosen folder takes, minus the dialog.
  */
 
 import { test, expect, _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
@@ -23,7 +25,7 @@ const PROJECT_ROOT = resolve(import.meta.dirname, '..', '..');
  */
 interface RendererApi {
   api: {
-    items: { list(query: { limit: number }): Promise<{ id: string }[]> };
+    items: { list(query: { limit: number }): Promise<Record<string, unknown>[]> };
     attachments: { add(input: { itemId: string; paths: string[] }): Promise<unknown> };
   };
 }
@@ -35,13 +37,16 @@ let userDataPath: string;
 
 async function launch(): Promise<void> {
   app = await electron.launch({
-    args: [join(PROJECT_ROOT, 'out', 'main', 'index.js'), `--user-data-dir=${userDataPath}`],
+    args: [
+      join(PROJECT_ROOT, 'out', 'main', 'index.js'),
+      `--user-data-dir=${userDataPath}`,
+      // Chromium's setuid sandbox cannot start as root, which is how Linux CI
+      // containers run. This does not affect the renderer's own sandbox, which
+      // is what the security test below actually checks.
+      ...(process.platform === 'linux' && process.getuid?.() === 0 ? ['--no-sandbox'] : []),
+    ],
     cwd: PROJECT_ROOT,
-    env: {
-      ...process.env,
-      NODE_ENV: 'test',
-      MINDEX_LIBRARY: libraryPath,
-    },
+    env: { ...process.env, NODE_ENV: 'test', MINDEX_LIBRARY: libraryPath },
   });
   window = await app.firstWindow();
   await window.waitForLoadState('domcontentloaded');
@@ -64,6 +69,29 @@ test.afterEach(async () => {
     // Windows sometimes holds the database handle a moment longer than we do.
   }
 });
+
+/**
+ * Read the newest item straight out of the database, through the same IPC the
+ * UI uses. Asserting on this rather than on the "Saved" flash keeps the tests
+ * about whether the edit landed, not about whether we caught a 1.5s indicator.
+ */
+async function newestItem(): Promise<Record<string, unknown> | null> {
+  return window.evaluate(async () => {
+    const api = (globalThis as unknown as RendererApi).api;
+    const items = await api.items.list({ limit: 1 });
+    return items[0] ?? null;
+  });
+}
+
+/** Create an item and give it a name, waiting until the name has been stored. */
+async function createItem(name: string): Promise<void> {
+  await window.getByRole('button', { name: 'New item' }).click();
+  // Wait for the new item's form to be the one on screen before typing into it.
+  await expect(window.locator('.title-input')).toHaveValue('New item');
+  await window.locator('.title-input').fill(name);
+  await window.locator('.title-input').blur();
+  await expect(window.locator('.item-list .row-name').first()).toHaveText(name);
+}
 
 test('@smoke opens a window and initialises the library folder', async () => {
   await expect(window.locator('.sidebar-nav .brand')).toHaveText('Mindex');
@@ -90,14 +118,15 @@ test('@smoke creates an item and shows it in the list', async () => {
 });
 
 test('edits are saved and survive a restart', async () => {
-  await window.getByRole('button', { name: 'New item' }).click();
-  await window.locator('.title-input').fill('Acme Widget');
-  await window.locator('.title-input').blur();
+  await createItem('Acme Widget');
+
   await window.locator('#manufacturer').fill('Acme');
   await window.locator('#manufacturer').blur();
   await window.locator('#notes').fill('the good one');
   await window.locator('#notes').blur();
-  await expect(window.locator('.saved')).toBeVisible();
+
+  // Wait for the write to reach the database rather than for the UI to flash.
+  await expect.poll(async () => (await newestItem())?.notes).toBe('the good one');
 
   await app.close();
   await launch();
@@ -110,10 +139,7 @@ test('edits are saved and survive a restart', async () => {
 
 test('search filters the list', async () => {
   for (const name of ['Bosch Drill', 'Makita Grinder', 'Acme Widget']) {
-    await window.getByRole('button', { name: 'New item' }).click();
-    await window.locator('.title-input').fill(name);
-    await window.locator('.title-input').blur();
-    await expect(window.locator('.saved')).toBeVisible();
+    await createItem(name);
   }
 
   await expect(window.locator('.item-list button.row')).toHaveCount(3);
@@ -123,7 +149,8 @@ test('search filters the list', async () => {
   await expect(window.locator('.item-list .row-name')).toHaveText('Makita Grinder');
 
   await window.getByLabel('Search items').fill('nothing matches this');
-  await expect(window.locator('.empty-state')).toContainText('Nothing matches');
+  // Scoped to the list: the detail pane shows its own empty state at the same time.
+  await expect(window.locator('.item-list .empty-state')).toContainText('Nothing matches');
 });
 
 test('a custom field appears on the item form and is searchable', async () => {
@@ -133,25 +160,19 @@ test('a custom field appears on the item form and is searchable', async () => {
   await expect(window.locator('.field-list .key')).toHaveText('serial');
 
   await window.getByRole('button', { name: 'Items' }).click();
-  await window.getByRole('button', { name: 'New item' }).click();
-  await window.locator('.title-input').fill('Tagged thing');
-  await window.locator('.title-input').blur();
+  await createItem('Tagged thing');
 
   const serial = window.locator('#field-serial');
   await expect(serial).toBeVisible();
   await serial.fill('XJ-9000');
   await serial.blur();
-  await expect(window.locator('.saved')).toBeVisible();
 
   await window.getByLabel('Search items').fill('xj-9000');
   await expect(window.locator('.item-list .row-name')).toHaveText('Tagged thing');
 });
 
 test('trashing an item moves its folder and can be undone', async () => {
-  await window.getByRole('button', { name: 'New item' }).click();
-  await window.locator('.title-input').fill('Doomed');
-  await window.locator('.title-input').blur();
-  await expect(window.locator('.saved')).toBeVisible();
+  await createItem('Doomed');
 
   await window.getByRole('button', { name: 'Move to trash' }).click();
 
@@ -173,22 +194,15 @@ test('the trash explains that nothing was deleted', async () => {
   await expect(window.locator('.pane-header')).toContainText('Nothing here has been deleted');
 });
 
-test('an attachment is copied into the item folder and listed', async () => {
+test('an attachment is copied in, and the folder only moves when asked', async () => {
   const source = mkdtempSync(join(tmpdir(), 'mindex-e2e-src-'));
   const file = join(source, 'manual.pdf');
   writeFileSync(file, 'PDF BYTES');
 
-  await window.getByRole('button', { name: 'New item' }).click();
-  await window.locator('.title-input').fill('Bosch Drill');
-  await window.locator('.title-input').blur();
-  await expect(window.locator('.saved')).toBeVisible();
+  await createItem('Bosch Drill');
 
-  // The dialog is native, so drive the same IPC the dialog would have called.
-  const itemId = await window.evaluate(async () => {
-    const api = (globalThis as unknown as RendererApi).api;
-    const items = await api.items.list({ limit: 1 });
-    return items[0].id;
-  });
+  // The file dialog is native, so drive the same IPC the dialog would have.
+  const itemId = String((await newestItem())?.id);
   await window.evaluate(
     async ([id, path]: [string, string]) => {
       const api = (globalThis as unknown as RendererApi).api;
@@ -199,20 +213,28 @@ test('an attachment is copied into the item folder and listed', async () => {
 
   await window.reload();
   await window.locator('.item-list button.row').click();
-
   await expect(window.locator('.attachments .filename')).toHaveText('manual.pdf');
-  expect(existsSync(join(libraryPath, 'data', 'bosch-drill', 'manual.pdf'))).toBe(true);
+
+  // The folder keeps the name the item had when it was created. Renaming an
+  // item does not move it: the id is the real key, and a stable folder is worth
+  // more than a tidy one.
+  expect(existsSync(join(libraryPath, 'data', 'new-item', 'manual.pdf'))).toBe(true);
+  expect(existsSync(join(libraryPath, 'data', 'bosch-drill'))).toBe(false);
+
   // Copied, never moved: the original is where the user left it.
   expect(existsSync(file)).toBe(true);
+
+  // Bringing the folder in line is an explicit, offered action.
+  await window.getByRole('button', { name: 'rename folder to match' }).click();
+  await expect(window.locator('.detail-footer code')).toHaveText('data/bosch-drill');
+  expect(existsSync(join(libraryPath, 'data', 'bosch-drill', 'manual.pdf'))).toBe(true);
+  expect(existsSync(join(libraryPath, 'data', 'new-item'))).toBe(false);
 
   rmSync(source, { recursive: true, force: true });
 });
 
 test('the verify report is clean for a healthy library', async () => {
-  await window.getByRole('button', { name: 'New item' }).click();
-  await window.locator('.title-input').fill('Widget');
-  await window.locator('.title-input').blur();
-  await expect(window.locator('.saved')).toBeVisible();
+  await createItem('Widget');
 
   await window.getByRole('button', { name: 'Settings' }).click();
   await window.getByRole('button', { name: 'Check now' }).click();

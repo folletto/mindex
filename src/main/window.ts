@@ -40,7 +40,8 @@ export function createWindow(devServerUrl: string | undefined): BrowserWindow {
     vibrancy: process.platform === 'darwin' ? 'sidebar' : undefined,
     backgroundColor: '#00000000',
     webPreferences: {
-      preload: join(HERE, '../preload/index.mjs'),
+      // Built as CommonJS: a sandboxed preload has no module loader.
+      preload: join(HERE, '../preload/index.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
