@@ -56,9 +56,14 @@ export function looksLikeSyncFolder(path: string): boolean {
   const segments = path.split(/[/\\]/).filter(Boolean);
   return segments.some((segment) => {
     const normalized = segment.toLowerCase();
-    return SYNC_SEGMENTS.some(
-      (needle) => normalized === needle || normalized.startsWith(`${needle} -`) || normalized.startsWith(`${needle}-`),
-    );
+    return SYNC_SEGMENTS.some((needle) => {
+      if (normalized === needle) return true;
+      // Account qualifiers: "Dropbox (Personal)", "OneDrive - Contoso".
+      if (normalized.startsWith(`${needle} `)) return true;
+      // macOS CloudStorage names the account inline: "GoogleDrive-sam@example.com".
+      // The "@" is what keeps this from swallowing "dropbox-clone".
+      return normalized.startsWith(`${needle}-`) && normalized.includes('@');
+    });
   });
 }
 

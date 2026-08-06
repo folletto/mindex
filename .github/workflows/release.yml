@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  # A red suite cannot ship. This reruns the full matrix against the tagged
+  # commit rather than trusting that the branch was green at some point.
+  verify:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    name: Build for ${{ matrix.os }}
+    needs: verify
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # No cross-compiling: better-sqlite3 is native, so each OS builds its own.
+        os: [macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: Package and publish
+        run: npx electron-builder --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Signing is opt-in: set these secrets and the build signs itself.
+          # Without them electron-builder produces an unsigned build, which is
+          # fine for a personal tool — see the install notes in the README.
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Smoke-test the artifact
+        run: npm run test:e2e -- --grep "@smoke"
+        env:
+          MINDEX_E2E_PACKAGED: '1'
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: installers-${{ matrix.os }}
+          path: |
+            release/*.dmg
+            release/*.zip
+            release/*.exe
+            release/*.yml
+          retention-days: 14
+          if-no-files-found: warn

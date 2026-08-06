@@ -113,7 +113,7 @@ export default tseslint.config(
   },
 
   {
-    files: ['*.config.ts', '*.config.js', 'scripts/**/*.ts'],
+    files: ['*.config.ts', '*.config.js', 'scripts/**/*.{ts,mjs}'],
     rules: { 'no-console': 'off' },
   },
 );

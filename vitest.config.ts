@@ -14,7 +14,9 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
-      include: ['src/main/**', 'src/shared/**'],
+      // Extension-scoped: the migrations folder holds .sql files, and the
+      // coverage provider tries to parse anything it is handed as JavaScript.
+      include: ['src/main/**/*.ts', 'src/shared/**/*.ts'],
       exclude: [
         // Electron entry points: covered by the Playwright suite, not by line
         // counting against a headless main process.

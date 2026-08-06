@@ -1,0 +1,38 @@
+name: Tag on version bump
+
+# "Commit a new version, get a release" — without the fragility of building on
+# every push. The tag stays the deterministic trigger; this just creates it when
+# package.json says a new version has landed on main.
+on:
+  push:
+    branches: [main]
+    paths: ['package.json']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create the tag if it does not exist
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")"
+          tag="v${version}"
+
+          if git rev-parse "refs/tags/${tag}" >/dev/null 2>&1; then
+            echo "${tag} already exists — nothing to do."
+            exit 0
+          fi
+
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git tag -a "${tag}" -m "Mindex ${version}"
+          git push origin "${tag}"
+          echo "Pushed ${tag}; the release workflow takes it from here."
