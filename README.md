@@ -1,0 +1,2 @@
+# mindex
+Electron MI app
