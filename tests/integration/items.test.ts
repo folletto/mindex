@@ -138,7 +138,9 @@ describe('updateItem', () => {
 
   it('refuses to blank the name', () => {
     const item = lib.service.createItem({ name: 'Widget' });
-    expect(() => lib.service.updateItem({ id: item.id, rev: item.rev, patch: { name: '  ' } })).toThrow(ValidationError);
+    expect(() => lib.service.updateItem({ id: item.id, rev: item.rev, patch: { name: '  ' } })).toThrow(
+      ValidationError,
+    );
   });
 
   it('throws for an item that is gone', () => {

@@ -212,7 +212,9 @@ describe('schema shape', () => {
     migrate(db, { backup: false });
     db.pragma('foreign_keys = ON');
     expect(() =>
-      db.prepare(`INSERT INTO attachments (id, item_id, filename, added_at) VALUES ('a1', 'ghost', 'x.pdf', 'now')`).run(),
+      db
+        .prepare(`INSERT INTO attachments (id, item_id, filename, added_at) VALUES ('a1', 'ghost', 'x.pdf', 'now')`)
+        .run(),
     ).toThrow(/FOREIGN KEY/);
     db.close();
   });
@@ -235,9 +237,10 @@ describe('schema shape', () => {
       );
     }
 
-    const rows = db
-      .prepare('SELECT id, attachment_count FROM items_with_counts ORDER BY id')
-      .all() as { id: string; attachment_count: number }[];
+    const rows = db.prepare('SELECT id, attachment_count FROM items_with_counts ORDER BY id').all() as {
+      id: string;
+      attachment_count: number;
+    }[];
     expect(rows).toEqual([
       { id: 'i1', attachment_count: 3 },
       { id: 'i2', attachment_count: 0 },

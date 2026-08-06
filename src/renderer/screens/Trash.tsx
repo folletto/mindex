@@ -47,8 +47,8 @@ export function Trash({ dataVersion, readOnly, onRestored }: Props) {
       <header className="pane-header">
         <h2>Trash</h2>
         <p className="muted">
-          Nothing here has been deleted. Each item&rsquo;s folder was moved into <code>deleted/</code>, where it
-          stays until you remove it yourself.
+          Nothing here has been deleted. Each item&rsquo;s folder was moved into <code>deleted/</code>, where it stays
+          until you remove it yourself.
         </p>
       </header>
 

@@ -191,8 +191,7 @@ export function openLibrary(root: string, options: OpenLibraryOptions = {}): Lib
   const storageKind = detectStorageKind(paths.root);
 
   const existingMarker = classification.kind === 'library' ? classification.marker : null;
-  const journalMode: JournalMode =
-    options.journalMode ?? existingMarker?.journalMode ?? journalModeFor(storageKind);
+  const journalMode: JournalMode = options.journalMode ?? existingMarker?.journalMode ?? journalModeFor(storageKind);
 
   // --- advisory lock, sync folders only ---
   let lockHolder: LockHolder | null = null;

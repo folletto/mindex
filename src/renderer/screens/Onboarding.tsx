@@ -65,16 +65,15 @@ export function Onboarding({ state }: Props) {
         <p className="lead">A catalogue of your things, kept in a folder you own.</p>
 
         <p className="explain">
-          Everything lives in one folder: a small database file, and one subfolder per item holding its
-          attachments. Put it in Dropbox, iCloud or Syncthing and several machines can share it. Open it in
-          Finder or Explorer and everything is where you would expect. Nothing is stored anywhere else, and
-          nothing leaves your computer.
+          Everything lives in one folder: a small database file, and one subfolder per item holding its attachments.
+          Put it in Dropbox, iCloud or Syncthing and several machines can share it. Open it in Finder or Explorer and
+          everything is where you would expect. Nothing is stored anywhere else, and nothing leaves your computer.
         </p>
 
         {state.status === 'missing' && state.path && (
           <p className="warning">
-            The folder <code>{state.path}</code> is not there any more. It may be on a drive that is not
-            mounted, or it may have moved.
+            The folder <code>{state.path}</code> is not there any more. It may be on a drive that is not mounted, or
+            it may have moved.
           </p>
         )}
 
@@ -83,8 +82,8 @@ export function Onboarding({ state }: Props) {
         {foreign && (
           <div className="confirm">
             <p>
-              <strong>{foreign.path}</strong> already has files in it, so Mindex will not turn it into a
-              library — that would mix your catalogue in with whatever is already there.
+              <strong>{foreign.path}</strong> already has files in it, so Mindex will not turn it into a library —
+              that would mix your catalogue in with whatever is already there.
             </p>
             <p className="muted">
               It contains: {foreign.entries.slice(0, 6).join(', ')}

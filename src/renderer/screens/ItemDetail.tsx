@@ -212,8 +212,8 @@ export function ItemDetail({ itemId, fields, dataVersion, readOnly, onTrashed, o
       {conflict && (
         <div className="conflict">
           <p>
-            <strong>Another copy of Mindex changed this while you were editing.</strong> Nothing has been
-            overwritten. The fields that disagree are: {conflict.overlapping.join(', ')}.
+            <strong>Another copy of Mindex changed this while you were editing.</strong> Nothing has been overwritten.
+            The fields that disagree are: {conflict.overlapping.join(', ')}.
           </p>
           <div className="conflict-columns">
             <div>
@@ -365,9 +365,7 @@ function FieldRow({
 }
 
 function summarize(item: Item, keys: string[]): string {
-  return keys
-    .map((key) => `${key}: ${String(readKey(item, key) ?? '')}`)
-    .join('\n');
+  return keys.map((key) => `${key}: ${String(readKey(item, key) ?? '')}`).join('\n');
 }
 
 function summarizeDraft(draft: Draft, keys: string[]): string {

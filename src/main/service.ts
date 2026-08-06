@@ -286,11 +286,7 @@ export class LibraryService {
    * Three-way merge test. A field the other writer left untouched is safe to
    * overwrite even though the rev moved on; anything else needs the user.
    */
-  private findOverlaps(
-    db: Library['db'],
-    current: ItemRow,
-    input: UpdateItemInput,
-  ): string[] {
+  private findOverlaps(db: Library['db'], current: ItemRow, input: UpdateItemInput): string[] {
     const overlapping: string[] = [];
 
     for (const key of ITEM_FIELDS) {
@@ -481,9 +477,10 @@ export class LibraryService {
   itemFolderPath(id: string, options: { create?: boolean } = {}): string {
     const row = repo.getItemRow(this.db, id);
     if (!row) throw new NotFoundError('The item');
-    const folder = row.deletedAt && row.deletedPath
-      ? trashFolder(this.library.paths, row.deletedPath)
-      : itemFolder(this.library.paths, row.slug);
+    const folder =
+      row.deletedAt && row.deletedPath
+        ? trashFolder(this.library.paths, row.deletedPath)
+        : itemFolder(this.library.paths, row.slug);
     if (options.create && !row.deletedAt) mkdirSync(folder, { recursive: true });
     return folder;
   }
@@ -529,7 +526,8 @@ export class LibraryService {
     for (let attempt = 0; attempt < 20; attempt++) {
       const filename = nextAvailableFilename(
         desired,
-        (candidate) => repo.isFilenameTaken(this.db, itemId, candidate) || existsSync(resolveInside(folder, candidate)),
+        (candidate) =>
+          repo.isFilenameTaken(this.db, itemId, candidate) || existsSync(resolveInside(folder, candidate)),
       );
       const target = resolveInside(folder, filename);
 
@@ -580,10 +578,7 @@ export class LibraryService {
     const row = repo.getItemRow(this.db, attachment.itemId);
 
     if (existsSync(path)) {
-      const bin = trashFolder(
-        this.library.paths,
-        trashFolderName(`${row?.slug ?? 'item'}-attachment`, this.now()),
-      );
+      const bin = trashFolder(this.library.paths, trashFolderName(`${row?.slug ?? 'item'}-attachment`, this.now()));
       mkdirSync(bin, { recursive: true });
       const target = resolveInside(bin, attachment.filename);
       try {
@@ -772,7 +767,8 @@ export class LibraryService {
     // Sync clients name their conflicts predictably enough to spot.
     if (existsSync(root)) {
       for (const entry of readdirSync(root)) {
-        if (/conflicted copy|conflict\b|\(\d+\)\.db$|\.sync-conflict/i.test(entry)) report.conflictedCopies.push(entry);
+        if (/conflicted copy|conflict\b|\(\d+\)\.db$|\.sync-conflict/i.test(entry))
+          report.conflictedCopies.push(entry);
       }
     }
 

@@ -8,7 +8,14 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { classifyFolder, createLibraryIn, isLibrary, openLibrary, readMarker, probeWritable } from '../../src/main/library.js';
+import {
+  classifyFolder,
+  createLibraryIn,
+  isLibrary,
+  openLibrary,
+  readMarker,
+  probeWritable,
+} from '../../src/main/library.js';
 import { appSchemaVersion } from '../../src/main/db/migrations.js';
 import { cleanupTempDirs, makeTempDir, snapshotTree } from '../helpers/temp.js';
 

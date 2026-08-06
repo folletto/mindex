@@ -106,36 +106,37 @@ describe('Session', () => {
 });
 
 describe('external change detection', () => {
-  it(
-    'notifies listeners when another connection commits',
-    async () => {
-      session = new Session();
-      const root = makeTempDir();
-      session.open(root, { initialize: true });
+  it('notifies listeners when another connection commits', async () => {
+    session = new Session();
+    const root = makeTempDir();
+    session.open(root, { initialize: true });
 
-      let notifications = 0;
-      session.onExternalChange(() => notifications++);
+    let notifications = 0;
+    session.onExternalChange(() => notifications++);
 
-      // Our own writes must not fire it — that would mean re-reading the list
-      // on every keystroke's worth of autosave.
-      session.service.createItem({ name: 'Mine' });
-      await wait(2500);
-      expect(notifications).toBe(0);
+    // Our own writes must not fire it — that would mean re-reading the list
+    // on every keystroke's worth of autosave.
+    session.service.createItem({ name: 'Mine' });
+    await wait(2500);
+    expect(notifications).toBe(0);
 
-      // Another connection standing in for another machine.
-      const other = openLibrary(root);
-      try {
-        new LibraryService(other, { host: 'other-machine' }).createItem({ name: 'Theirs' });
-      } finally {
-        other.close();
-      }
+    // Another connection standing in for another machine.
+    const other = openLibrary(root);
+    try {
+      new LibraryService(other, { host: 'other-machine' }).createItem({ name: 'Theirs' });
+    } finally {
+      other.close();
+    }
 
-      await waitFor(() => notifications > 0, 8000);
-      expect(notifications).toBeGreaterThan(0);
-      expect(session.service.listItems().map((row) => row.name).sort()).toEqual(['Mine', 'Theirs']);
-    },
-    30_000,
-  );
+    await waitFor(() => notifications > 0, 8000);
+    expect(notifications).toBeGreaterThan(0);
+    expect(
+      session.service
+        .listItems()
+        .map((row) => row.name)
+        .sort(),
+    ).toEqual(['Mine', 'Theirs']);
+  }, 30_000);
 
   it('stops polling once the library is closed', async () => {
     session = new Session();

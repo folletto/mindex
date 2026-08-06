@@ -98,9 +98,9 @@ export function Settings({ state }: Props) {
       <section className="settings-group">
         <h3>Journal mode</h3>
         <p className="muted">
-          WAL is faster and lets reading carry on while another machine writes, but it needs a shared-memory
-          file that network shares and sync clients do not provide. Mindex picks the safe option
-          automatically; change it only if you know the folder better than the guess does.
+          WAL is faster and lets reading carry on while another machine writes, but it needs a shared-memory file that
+          network shares and sync clients do not provide. Mindex picks the safe option automatically; change it only
+          if you know the folder better than the guess does.
         </p>
         <div className="row">
           <label className="radio">
@@ -137,8 +137,8 @@ export function Settings({ state }: Props) {
       <section className="settings-group">
         <h3>Verify library</h3>
         <p className="muted">
-          Compares the database against the folder. It changes nothing — it just tells you what has drifted, so
-          you can fix it yourself.
+          Compares the database against the folder. It changes nothing — it just tells you what has drifted, so you
+          can fix it yourself.
         </p>
         <button type="button" onClick={verify} disabled={busy}>
           {busy ? 'Checking…' : 'Check now'}

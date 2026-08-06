@@ -3,7 +3,14 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import { join } from 'node:path';
 import { NotFoundError, ValidationError } from '../../src/main/service.js';
 import { PathEscapeError } from '../../src/main/paths.js';
-import { cleanupTempDirs, makeFile, makeLibrary, makeTempDir, snapshotTree, type TestLibrary } from '../helpers/temp.js';
+import {
+  cleanupTempDirs,
+  makeFile,
+  makeLibrary,
+  makeTempDir,
+  snapshotTree,
+  type TestLibrary,
+} from '../helpers/temp.js';
 
 let lib: TestLibrary;
 let source: string;
@@ -131,7 +138,9 @@ describe('attachmentPath', () => {
     // check is the last line of defence.
     const item = lib.service.createItem({ name: 'Widget' });
     const [attachment] = lib.service.addAttachments({ itemId: item.id, paths: [makeFile(source, 'a.pdf')] });
-    lib.library.db.prepare('UPDATE attachments SET filename = ? WHERE id = ?').run('../../../etc/passwd', attachment.id);
+    lib.library.db
+      .prepare('UPDATE attachments SET filename = ? WHERE id = ?')
+      .run('../../../etc/passwd', attachment.id);
 
     expect(() => lib.service.attachmentPath(attachment.id)).toThrow(PathEscapeError);
   });
@@ -140,7 +149,10 @@ describe('attachmentPath', () => {
 describe('removeAttachment', () => {
   it('drops the row and moves the bytes to deleted/', () => {
     const item = lib.service.createItem({ name: 'Widget' });
-    const [attachment] = lib.service.addAttachments({ itemId: item.id, paths: [makeFile(source, 'a.pdf', 'keep me')] });
+    const [attachment] = lib.service.addAttachments({
+      itemId: item.id,
+      paths: [makeFile(source, 'a.pdf', 'keep me')],
+    });
 
     lib.service.removeAttachment({ attachmentId: attachment.id });
 

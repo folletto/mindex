@@ -92,7 +92,13 @@ describe('inspectLock', () => {
     const path = lockPathIn(makeTempDir());
     writeFileSync(
       path,
-      JSON.stringify({ host: 'laptop', user: 'sam', pid: 42, startedAt: now.toISOString(), heartbeatAt: now.toISOString() }),
+      JSON.stringify({
+        host: 'laptop',
+        user: 'sam',
+        pid: 42,
+        startedAt: now.toISOString(),
+        heartbeatAt: now.toISOString(),
+      }),
     );
 
     const result = inspectLock(path, new Date(now.getTime() + 10_000), 'desktop');
@@ -103,7 +109,13 @@ describe('inspectLock', () => {
     const path = lockPathIn(makeTempDir());
     writeFileSync(
       path,
-      JSON.stringify({ host: 'laptop', user: 'sam', pid: 42, startedAt: now.toISOString(), heartbeatAt: now.toISOString() }),
+      JSON.stringify({
+        host: 'laptop',
+        user: 'sam',
+        pid: 42,
+        startedAt: now.toISOString(),
+        heartbeatAt: now.toISOString(),
+      }),
     );
 
     const result = inspectLock(path, new Date(now.getTime() + LOCK_STALE_AFTER_MS + 1000), 'desktop');

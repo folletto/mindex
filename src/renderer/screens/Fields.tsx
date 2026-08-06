@@ -47,7 +47,13 @@ export function Fields({ fields, readOnly, onChanged }: Props) {
       await api.fields.create({
         label,
         type,
-        options: type === 'select' ? options.split(',').map((option) => option.trim()).filter(Boolean) : undefined,
+        options:
+          type === 'select'
+            ? options
+                .split(',')
+                .map((option) => option.trim())
+                .filter(Boolean)
+            : undefined,
       });
       setLabel('');
       setOptions('');
@@ -72,8 +78,8 @@ export function Fields({ fields, readOnly, onChanged }: Props) {
       <header className="pane-header">
         <h2>Fields</h2>
         <p className="muted">
-          Fields you add here appear on every item in this library. Renaming a field is free. Changing its type
-          is checked against the values already stored, and refused rather than applied if any would be lost.
+          Fields you add here appear on every item in this library. Renaming a field is free. Changing its type is
+          checked against the values already stored, and refused rather than applied if any would be lost.
         </p>
       </header>
 
@@ -101,7 +107,9 @@ export function Fields({ fields, readOnly, onChanged }: Props) {
                   disabled={readOnly}
                   aria-label={`Type of the ${field.label} field`}
                   onChange={(event) =>
-                    void run(() => api.fields.update({ id: field.id, patch: { type: event.target.value as FieldType } }))
+                    void run(() =>
+                      api.fields.update({ id: field.id, patch: { type: event.target.value as FieldType } }),
+                    )
                   }
                 >
                   {FIELD_TYPES.map((candidate) => (
@@ -123,7 +131,12 @@ export function Fields({ fields, readOnly, onChanged }: Props) {
                 </label>
               </div>
               <div className="row">
-                <button type="button" className="ghost small" disabled={readOnly || index === 0} onClick={() => move(field, -1)}>
+                <button
+                  type="button"
+                  className="ghost small"
+                  disabled={readOnly || index === 0}
+                  onClick={() => move(field, -1)}
+                >
                   ↑
                 </button>
                 <button

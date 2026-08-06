@@ -249,7 +249,9 @@ if (argument) {
     process.stdout.write(`__RESULT__${JSON.stringify(result)}`);
     process.exit(0);
   } catch (error) {
-    process.stdout.write(`__ERROR__${JSON.stringify({ message: (error as Error).message, stack: (error as Error).stack })}`);
+    process.stdout.write(
+      `__ERROR__${JSON.stringify({ message: (error as Error).message, stack: (error as Error).stack })}`,
+    );
     process.exit(1);
   }
 }

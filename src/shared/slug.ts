@@ -46,7 +46,7 @@ const TRANSLITERATIONS: Record<string, string> = {
   '№': '-no-',
   '€': '-eur-',
   '£': '-gbp-',
-  '$': '-usd-',
+  $: '-usd-',
   '&': '-and-',
   '@': '-at-',
   '%': '-pct-',

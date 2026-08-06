@@ -178,11 +178,14 @@ export function registerIpc(context: IpcContext): void {
   handle('items:list', (query: ListQuery) => session.service.listItems(query));
   handle('items:get', (id: string) => session.service.getItem(id));
 
-  handle('items:create', (input: { name: string; manufacturer?: string; notes?: string; fields?: Record<string, FieldValue> }) => {
-    const item = session.service.createItem(input);
-    broadcast('library:dataChanged');
-    return item;
-  });
+  handle(
+    'items:create',
+    (input: { name: string; manufacturer?: string; notes?: string; fields?: Record<string, FieldValue> }) => {
+      const item = session.service.createItem(input);
+      broadcast('library:dataChanged');
+      return item;
+    },
+  );
 
   handle(
     'items:update',

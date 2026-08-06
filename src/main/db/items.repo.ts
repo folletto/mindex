@@ -144,7 +144,10 @@ export function listTrash(db: Database, query: { query?: string } = {}): TrashRo
   return rows.map(toTrashRow);
 }
 
-export function getItemRow(db: Database, id: string): (ItemRow & { deletedAt: string | null; deletedPath: string | null }) | null {
+export function getItemRow(
+  db: Database,
+  id: string,
+): (ItemRow & { deletedAt: string | null; deletedPath: string | null }) | null {
   const record = db.prepare('SELECT * FROM items_with_counts WHERE id = ?').get(id) as ItemRecord | undefined;
   if (!record) return null;
   return { ...toItemRow(record), deletedAt: record.deleted_at, deletedPath: record.deleted_path };
@@ -333,11 +336,7 @@ export function valuesForField(db: Database, fieldId: string): { itemId: string;
 }
 
 /** Re-derive num_value for every stored value of a field, after a type change. */
-export function refreshNumValue(
-  db: Database,
-  fieldId: string,
-  compute: (value: string) => number | null,
-): void {
+export function refreshNumValue(db: Database, fieldId: string, compute: (value: string) => number | null): void {
   const statement = db.prepare('UPDATE field_values SET num_value = ? WHERE item_id = ? AND field_id = ?');
   for (const row of valuesForField(db, fieldId)) {
     if (row.value === null) continue;

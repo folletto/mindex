@@ -1,0 +1,7 @@
+out/
+dist/
+release/
+coverage/
+node_modules/
+*.sql
+build/*.png

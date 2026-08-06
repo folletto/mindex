@@ -47,9 +47,7 @@ let clockCounter = 0;
  * A library on a fresh temp folder, with a monotonic clock so that ordering
  * assertions do not depend on how fast the machine is.
  */
-export function makeLibrary(
-  options: { journalMode?: JournalMode; host?: string; root?: string } = {},
-): TestLibrary {
+export function makeLibrary(options: { journalMode?: JournalMode; host?: string; root?: string } = {}): TestLibrary {
   const root = options.root ?? makeTempDir();
   const library = openLibrary(root, { initialize: true, journalMode: options.journalMode });
   const service = new LibraryService(library, {

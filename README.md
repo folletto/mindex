@@ -1,2 +1,184 @@
-# mindex
-Electron MI app
+# Mindex
+
+A catalogue of your things, kept in a folder you own.
+
+Mindex is an offline desktop app for macOS and Windows that keeps a list of items — tools, parts,
+equipment, whatever you need to find again — with notes, your own custom fields, and the manuals and
+photos that go with them. There is no account, no server, and nothing leaves your computer.
+
+**[Download](https://folletto.github.io/mindex/)** · [Releases](https://github.com/folletto/mindex/releases)
+
+---
+
+## The data folder is the point
+
+You pick a folder on first launch. Everything lives inside it:
+
+```
+My Catalogue/
+├─ catalogue.db          # SQLite: the source of truth for metadata
+├─ .catalogue-library    # marker: {"app":"mindex","schema":1,…}
+├─ data/
+│  ├─ acme-widget-mk2/
+│  │  ├─ datasheet.pdf
+│  │  └─ photo.jpg
+│  └─ bosch-gsb-13-re/
+│     └─ manual.pdf
+└─ deleted/              # created lazily; never emptied automatically
+   └─ old-thing--20260806-141530/
+      └─ manual.pdf
+```
+
+That shape is a promise, not an implementation detail:
+
+- **It is portable.** Put the folder in Dropbox, iCloud or Syncthing and several machines share one
+  catalogue. Move it to another disk and open it there.
+- **It is inspectable.** Every attachment is a real file in a folder named after the item. You do not
+  need Mindex to get your files back.
+- **Nothing is destroyed.** Deleting an item moves its folder into `deleted/` with a timestamp.
+  Removing an attachment moves the file there too. If you want the bytes gone, you delete them
+  yourself, in your file manager, on purpose.
+
+## Several machines, one catalogue
+
+Two copies of Mindex — or Mindex and a script — can write to the same library at once without
+corrupting it or losing an edit. This is the part of the design that took the most care:
+
+- Every write runs in a short `BEGIN IMMEDIATE` transaction. A transaction never spans user input, a
+  file copy or an IPC round-trip: the form you are typing into is not a transaction, the save is.
+- Contention is waited out (`busy_timeout`) and then retried with jittered backoff before you ever
+  hear about it.
+- Every update is conditional on a revision number. If another machine got there first, Mindex does
+  **not** silently overwrite: it reloads, merges the fields the other writer did not touch, and shows
+  you a panel for the ones that genuinely disagree. Your typing is never swallowed by a dialog.
+- The journal mode follows the storage. WAL is faster but relies on shared memory that network shares
+  and file-sync clients do not provide, so those get the slower, correct rollback journal instead.
+- On a sync folder, Mindex takes an advisory heartbeat lock. If another machine has the library open,
+  this one opens read-only and says whose machine it is — with a way through, because the lock is
+  advice, not a wall.
+
+**The honest limitation:** two machines editing the *same item* in the *same second* on a
+*cloud-synced* folder can still make the sync client produce a conflicted copy of the database file.
+That is a property of file-level sync, not of the app. Mindex detects those copies and tells you.
+Real multi-writer over the internet would need a server, which this app deliberately does not have.
+
+## Installing
+
+Builds are currently **unsigned**, which costs one extra step the first time.
+
+### macOS
+
+Right-click the app and choose **Open** — double-clicking will show a warning and refuse. You only
+have to do this once. If macOS still refuses:
+
+```sh
+xattr -d com.apple.quarantine /Applications/Mindex.app
+```
+
+### Windows
+
+SmartScreen warns about an unrecognised publisher until the download builds a reputation. Choose
+**More info** → **Run anyway**.
+
+Signing is wired up but off: set `CSC_LINK` / `CSC_KEY_PASSWORD` (and `APPLE_ID`,
+`APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` for notarization) as repository secrets and the
+release workflow signs itself. Note that **macOS auto-update requires a signed app**, which is why
+Mindex currently points you at the download page rather than updating itself.
+
+---
+
+## Development
+
+```sh
+npm install
+npm run rebuild:electron   # see the note below
+npm run dev
+```
+
+### The one wrinkle: better-sqlite3 is a native module
+
+It has to be compiled against whichever ABI is going to load it, and Node and Electron do not share
+one. So there is a deliberate switch rather than a `postinstall` that would quietly break one of them:
+
+| You want to… | Run |
+|---|---|
+| run the tests (they use plain Node) | `npm run rebuild:node` |
+| run or package the app | `npm run rebuild:electron` |
+
+A fresh `npm ci` leaves you in the Node state, which is what CI's test job wants. The packaging job
+rebuilds for Electron itself, and `electron-builder` does it again at package time.
+
+### Commands
+
+| Command | What it does |
+|---|---|
+| `npm run dev` | Electron with hot reload |
+| `npm run build` | Typecheck, then build to `out/` |
+| `npm test` | Unit, property, integration and concurrency suites |
+| `npm run test:coverage` | The same, with the 90% gate on `src/main` and `src/shared` |
+| `npm run test:e2e` | Playwright against the built app (needs `rebuild:electron` first) |
+| `npm run lint` | ESLint, including the rules that keep the renderer sandboxed |
+| `npm run dist` | Build installers into `release/` |
+
+### Layout
+
+```
+src/
+├─ main/        # Electron main: the database handle, the filesystem, the dialogs
+│  ├─ db/       # connection pragmas, migrations, all SQL
+│  ├─ service.ts   # the one place that sequences disk and database work
+│  ├─ library.ts   # classify, initialise and open a library folder
+│  └─ ipc.ts       # the entire IPC surface, in one readable file
+├─ preload/     # the typed allow-list the renderer can see
+├─ renderer/    # React. No fs, no path, no Electron — enforced by lint
+└─ shared/      # types and pure logic used by both sides
+```
+
+The renderer runs with `contextIsolation`, `sandbox`, no Node integration, a strict CSP, and no way
+to navigate or open a window. Only IDs cross the IPC boundary; the main process resolves them to
+paths from the database, and every resolved path is checked for containment inside the library folder
+before it is used.
+
+### Testing
+
+Testing is a deliverable here, not a milestone. Around 390 tests, in layers:
+
+| Layer | What it covers |
+|---|---|
+| Unit + property (`fast-check`) | slug generation, filename sanitisation, path containment, retry backoff |
+| Integration | real SQLite on a real temp folder — repositories, migrations, constraints, compensating writes |
+| Concurrency | **real child processes** writing to one shared library, on both journal modes |
+| End-to-end | Playwright driving the built Electron app |
+
+Two areas get the heaviest coverage because they are the ones that would hurt most if they broke
+quietly:
+
+- **`slug.ts`** decides folder names on disk. It has table-driven cases for accents, CJK, emoji, RTL,
+  every Windows reserved device name, and NFC-vs-NFD pairs (macOS decomposes filenames, Windows does
+  not — the canonical trap for an app like this), plus properties asserting the output always matches
+  `^[a-z0-9-]{1,60}$`, is idempotent, and is never a reserved name.
+- **Concurrency** is tested with actual processes, never mocks. SQLite's locking is a property of
+  processes and files; a mock would hide exactly the behaviour the tests exist to verify. The suite
+  covers an eight-process hammer (then `integrity_check`, `foreign_key_check`, no duplicate live
+  slugs, and every attachment's bytes still present), a lost-update race where exactly one writer
+  must win, a busy storm where a three-second write lock must be waited out rather than errored on,
+  and migration skew where an older app must degrade to read-only.
+
+There is no mocked database anywhere, and no test asserts on a mock's call log.
+
+### Adding a migration
+
+Add `src/main/db/migrations/00N_what_it_does.sql`. Never edit an existing one — a test applies the
+chain step by step and compares the resulting schema against a from-scratch apply, which is what
+catches that mistake. Migrations run in one exclusive transaction, after backing the database up, and
+an app that meets a library from a newer version refuses to write to it rather than guessing.
+
+## Releasing
+
+`npm version patch|minor|major` and push. A workflow turns the version bump into a `v*.*.*` tag; the
+tag reruns the full CI matrix and, only if it is green, builds and publishes installers to GitHub
+Releases. The download page reads the releases API at load time, so it never needs redeploying.
+
+## Licence
+
+MIT.

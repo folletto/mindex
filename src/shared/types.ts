@@ -174,7 +174,12 @@ export interface MindexApi {
   items: {
     list(query: ListQuery): Promise<ItemRow[]>;
     get(id: string): Promise<Item | null>;
-    create(input: { name: string; manufacturer?: string; notes?: string; fields?: Record<string, FieldValue> }): Promise<Item>;
+    create(input: {
+      name: string;
+      manufacturer?: string;
+      notes?: string;
+      fields?: Record<string, FieldValue>;
+    }): Promise<Item>;
     update(input: {
       id: string;
       rev: number;
@@ -192,7 +197,10 @@ export interface MindexApi {
   fields: {
     list(): Promise<FieldDef[]>;
     create(input: { label: string; type: FieldType; options?: string[] }): Promise<FieldDef>;
-    update(input: { id: string; patch: Partial<Pick<FieldDef, 'label' | 'type' | 'options' | 'position' | 'searchable'>> }): Promise<FieldDef>;
+    update(input: {
+      id: string;
+      patch: Partial<Pick<FieldDef, 'label' | 'type' | 'options' | 'position' | 'searchable'>>;
+    }): Promise<FieldDef>;
     archive(input: { id: string; archived: boolean }): Promise<FieldDef>;
     remove(input: { id: string }): Promise<OkResult>;
     reorder(input: { ids: string[] }): Promise<FieldDef[]>;

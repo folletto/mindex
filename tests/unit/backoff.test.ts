@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import fc from 'fast-check';
-import { DEFAULT_BACKOFF, RetryExhaustedError, backoffDelay, retrySync, sleepSync } from '../../src/shared/backoff.js';
+import {
+  DEFAULT_BACKOFF,
+  RetryExhaustedError,
+  backoffDelay,
+  retrySync,
+  sleepSync,
+} from '../../src/shared/backoff.js';
 
 describe('backoffDelay', () => {
   it('doubles the ceiling on each attempt', () => {
@@ -24,11 +30,15 @@ describe('backoffDelay', () => {
 
   it('never returns a negative or unbounded delay', () => {
     fc.assert(
-      fc.property(fc.integer({ min: -5, max: 100 }), fc.double({ min: 0, max: 0.9999, noNaN: true }), (attempt, r) => {
-        const delay = backoffDelay(attempt, { random: () => r });
-        expect(delay).toBeGreaterThanOrEqual(0);
-        expect(delay).toBeLessThanOrEqual(DEFAULT_BACKOFF.maxMs);
-      }),
+      fc.property(
+        fc.integer({ min: -5, max: 100 }),
+        fc.double({ min: 0, max: 0.9999, noNaN: true }),
+        (attempt, r) => {
+          const delay = backoffDelay(attempt, { random: () => r });
+          expect(delay).toBeGreaterThanOrEqual(0);
+          expect(delay).toBeLessThanOrEqual(DEFAULT_BACKOFF.maxMs);
+        },
+      ),
       { numRuns: 1000 },
     );
   });
@@ -78,7 +88,15 @@ describe('retrySync', () => {
   it('rethrows immediately for errors that are not retryable', () => {
     const sleep = vi.fn();
     const boom = new Error('syntax error');
-    expect(() => retrySync(() => { throw boom; }, isBusy, { sleep })).toThrow(boom);
+    expect(() =>
+      retrySync(
+        () => {
+          throw boom;
+        },
+        isBusy,
+        { sleep },
+      ),
+    ).toThrow(boom);
     expect(sleep).not.toHaveBeenCalled();
   });
 
@@ -102,7 +120,13 @@ describe('retrySync', () => {
   it('keeps the underlying error as the cause', () => {
     const original = busy();
     try {
-      retrySync(() => { throw original; }, isBusy, { retries: 1, sleep: () => {} });
+      retrySync(
+        () => {
+          throw original;
+        },
+        isBusy,
+        { retries: 1, sleep: () => {} },
+      );
       expect.unreachable('should have thrown');
     } catch (error) {
       expect(error).toBeInstanceOf(RetryExhaustedError);

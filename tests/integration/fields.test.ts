@@ -94,8 +94,14 @@ describe('coerceFieldValue', () => {
 
   it('treats blank as cleared, for every type', () => {
     for (const type of ['text', 'number', 'date', 'boolean', 'url', 'select'] as const) {
-      expect(coerceFieldValue({ type, options: [] }, '')).toEqual({ ok: true, stored: { value: null, numValue: null } });
-      expect(coerceFieldValue({ type, options: [] }, null)).toEqual({ ok: true, stored: { value: null, numValue: null } });
+      expect(coerceFieldValue({ type, options: [] }, '')).toEqual({
+        ok: true,
+        stored: { value: null, numValue: null },
+      });
+      expect(coerceFieldValue({ type, options: [] }, null)).toEqual({
+        ok: true,
+        stored: { value: null, numValue: null },
+      });
     }
   });
 });
@@ -223,9 +229,10 @@ describe('changing a field type', () => {
 
     lib.service.updateField({ id: field.id, patch: { type: 'number' } });
 
-    const rows = lib.library.db
-      .prepare('SELECT value, num_value FROM field_values ORDER BY num_value')
-      .all() as { value: string; num_value: number }[];
+    const rows = lib.library.db.prepare('SELECT value, num_value FROM field_values ORDER BY num_value').all() as {
+      value: string;
+      num_value: number;
+    }[];
     expect(rows.map((row) => row.num_value)).toEqual([20, 100]);
   });
 

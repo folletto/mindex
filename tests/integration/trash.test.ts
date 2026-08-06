@@ -128,7 +128,12 @@ describe('restoreItem', () => {
 
   it('is lossless — the item comes back exactly as it went in', () => {
     const field = lib.service.createField({ label: 'Voltage', type: 'number' });
-    const item = lib.service.createItem({ name: 'Widget', manufacturer: 'Acme', notes: 'notes', fields: { [field.key]: 12 } });
+    const item = lib.service.createItem({
+      name: 'Widget',
+      manufacturer: 'Acme',
+      notes: 'notes',
+      fields: { [field.key]: 12 },
+    });
     const before = lib.service.getItem(item.id)!;
 
     lib.service.trashItem({ id: item.id, rev: before.rev });
