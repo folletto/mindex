@@ -57,7 +57,9 @@ export function sanitizeFilename(input: unknown): string {
 
   if (name === '' || name === '.' || name === '..') return FALLBACK_FILENAME;
 
-  let { stem, extension } = splitExtension(name);
+  const split = splitExtension(name);
+  const extension = split.extension;
+  let stem = split.stem;
   if (stem.trim() === '') stem = FALLBACK_FILENAME;
 
   if (WINDOWS_RESERVED_NAMES.has(stem.toLowerCase())) stem = `${stem}-1`;

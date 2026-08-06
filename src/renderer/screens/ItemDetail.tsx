@@ -55,16 +55,18 @@ export function ItemDetail({ itemId, fields, dataVersion, readOnly, onTrashed, o
     }
   }, [itemId]);
 
+  /**
+   * Load on mount, and again whenever anything commits — this window's own
+   * write or another machine's, which from here are the same event. `load`
+   * leaves a mid-edit draft alone, so a background refresh never eats typing.
+   *
+   * There is no per-item reset here because App keys this component by item id:
+   * select a different item and React gives us a fresh component, fresh state.
+   */
   useEffect(() => {
-    dirty.current = false;
-    setConflict(null);
-    setError(null);
-    void load();
-  }, [itemId, load]);
-
-  // Another machine (or another pane) committed: re-read, unless the user is
-  // mid-edit, in which case their typing wins until they save.
-  useEffect(() => {
+    // load() is async, so every setState it performs happens after an await
+    // rather than during this render; the rule cannot see through the promise.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [dataVersion, load]);
 

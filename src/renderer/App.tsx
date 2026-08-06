@@ -46,7 +46,12 @@ export function App() {
   useEffect(() => {
     if (!ready) return;
     let cancelled = false;
-    setLoading(true);
+    // Only show "Loading…" if the query is actually slow. Most are instant, and
+    // a flash of loading state on every keystroke reads as jitter.
+    const slow = setTimeout(() => {
+      if (!cancelled) setLoading(true);
+    }, 120);
+
     void api.items
       .list({ query: debouncedQuery, sort, direction, limit: 500 })
       .then((next) => {
@@ -54,20 +59,21 @@ export function App() {
         setItems(next);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        if (!cancelled) setLoading(false);
+      })
+      .finally(() => clearTimeout(slow));
+
     return () => {
       cancelled = true;
+      clearTimeout(slow);
     };
   }, [ready, debouncedQuery, sort, direction, dataVersion, localVersion]);
 
-  // Keep a sensible selection as the list changes underneath us.
-  useEffect(() => {
-    if (items.length === 0) {
-      setSelectedId(null);
-      return;
-    }
-    if (!selectedId || !items.some((item) => item.id === selectedId)) setSelectedId(items[0].id);
-  }, [items, selectedId]);
+  // The selection follows the list rather than being corrected after the fact:
+  // an id that has just been filtered out or trashed simply is not the selection
+  // any more, and there is no intermediate render where it still is.
+  const selected = selectedId && items.some((item) => item.id === selectedId) ? selectedId : (items[0]?.id ?? null);
 
   const createItem = useCallback(async () => {
     const item = await api.items.create({ name: 'New item' });
@@ -158,7 +164,7 @@ export function App() {
             <ItemList
               ref={searchRef}
               items={items}
-              selectedId={selectedId}
+              selectedId={selected}
               query={query}
               sort={sort}
               direction={direction}
@@ -172,10 +178,10 @@ export function App() {
             />
           </aside>
 
-          {selectedId ? (
+          {selected ? (
             <ItemDetail
-              key={selectedId}
-              itemId={selectedId}
+              key={selected}
+              itemId={selected}
               fields={fields}
               dataVersion={dataVersion}
               readOnly={readOnly}
