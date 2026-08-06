@@ -79,7 +79,14 @@ describe('Session', () => {
     session.open(root, { initialize: true });
     expect(session.state([], root).status).toBe('ready');
 
+    // Drop the database handle before removing the folder. Deleting it out from
+    // under a live SQLite connection works on POSIX but not on Windows, which
+    // refuses to unlink an open file — and losing the handle first is the truer
+    // simulation anyway: when a drive is ejected or a share drops, the handle
+    // dies and then the path is gone.
+    session.current!.db.close();
     rmSync(root, { recursive: true, force: true });
+
     expect(session.state([], root).status).toBe('missing');
   });
 
