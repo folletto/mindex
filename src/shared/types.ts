@@ -138,6 +138,23 @@ export interface VerifyReport {
 }
 
 /**
+ * Menu commands the main process broadcasts to the renderer. An allow-list, so
+ * the preload cannot be talked into subscribing to an arbitrary channel.
+ */
+export const MENU_CHANNELS = [
+  'menu:new-item',
+  'menu:focus-search',
+  'menu:change-library',
+  'menu:reveal-library',
+  'menu:settings',
+  'menu:verify',
+  'menu:view-items',
+  'menu:view-trash',
+  'menu:view-fields',
+] as const;
+export type MenuChannel = (typeof MENU_CHANNELS)[number];
+
+/**
  * The API the preload script exposes on `window.api`. The renderer sees this
  * type and nothing else — no `fs`, no `path`, no database handle.
  */
@@ -158,7 +175,14 @@ export interface MindexApi {
     list(query: ListQuery): Promise<ItemRow[]>;
     get(id: string): Promise<Item | null>;
     create(input: { name: string; manufacturer?: string; notes?: string; fields?: Record<string, FieldValue> }): Promise<Item>;
-    update(input: { id: string; rev: number; patch: ItemPatch; fields?: Record<string, FieldValue> }): Promise<UpdateResult>;
+    update(input: {
+      id: string;
+      rev: number;
+      patch: ItemPatch;
+      fields?: Record<string, FieldValue>;
+      /** Values the form started from, so a rev clash can be merged rather than raised. */
+      base?: ItemPatch & { fields?: Record<string, FieldValue> };
+    }): Promise<UpdateResult>;
     trash(input: { id: string; rev: number }): Promise<OkResult & { deletedPath?: string }>;
     restore(input: { id: string }): Promise<Item>;
     listTrash(query?: { query?: string }): Promise<TrashRow[]>;

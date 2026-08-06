@@ -14,7 +14,13 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "outDir": "./out/types-web"
+    "outDir": "./out/types-web",
+    // Mirrors the alias in electron.vite.config.ts. The renderer reaches into
+    // src/shared for types only — never for anything that touches Node.
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["src/shared/*"]
+    }
   },
   "include": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx", "src/shared/**/*.ts"]
 }
