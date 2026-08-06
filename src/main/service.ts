@@ -17,6 +17,7 @@ import {
   readdirSync,
   renameSync,
   rmSync,
+  rmdirSync,
   statSync,
   unlinkSync,
 } from 'node:fs';
@@ -348,14 +349,14 @@ export class LibraryService {
         }),
       );
     } catch (error) {
-      if (moved) this.moveFolder(target, source);
+      if (moved) this.undoTrashMove(target, source);
       throw error;
     }
 
     if (changes === 0) {
       // Someone edited or trashed the item first. Put the folder back and let
       // the caller re-read rather than leaving the disk out of step with the DB.
-      if (moved) this.moveFolder(target, source);
+      if (moved) this.undoTrashMove(target, source);
       return { ok: false, error: 'Another copy of Mindex changed this item first. Reload and try again.' };
     }
 
@@ -438,6 +439,20 @@ export class LibraryService {
     const renamed = this.getItem(input.id);
     if (!renamed) throw new NotFoundError('The item');
     return renamed;
+  }
+
+  /**
+   * Put a folder back after the database refused the deletion, and take the
+   * `deleted/` directory with it if we were the ones who created it. A library
+   * that has never had anything deleted should not grow an empty trash.
+   */
+  private undoTrashMove(target: string, source: string): void {
+    this.moveFolder(target, source);
+    try {
+      rmdirSync(this.library.paths.deletedDir);
+    } catch {
+      // Not empty, or not there. Either way there is nothing to tidy.
+    }
   }
 
   /**

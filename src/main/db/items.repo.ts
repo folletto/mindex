@@ -277,10 +277,13 @@ export function deleteAttachment(db: Database, id: string): number {
   return db.prepare('DELETE FROM attachments WHERE id = ?').run(id).changes;
 }
 
+/** Every attachment with its item's folder name, for the verify pass. */
 export function allAttachments(db: Database): (Attachment & { slug: string; deletedAt: string | null })[] {
   return db
     .prepare(
-      `SELECT a.id, a.item_id, a.filename, a.size_bytes, a.added_at, i.slug, i.deleted_at
+      `SELECT a.id AS id, a.item_id AS itemId, a.filename AS filename,
+              a.size_bytes AS sizeBytes, a.added_at AS addedAt,
+              i.slug AS slug, i.deleted_at AS deletedAt
        FROM attachments a JOIN items i ON i.id = a.item_id`,
     )
     .all() as (Attachment & { slug: string; deletedAt: string | null })[];
