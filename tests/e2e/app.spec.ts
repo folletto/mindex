@@ -35,16 +35,46 @@ let window: Page;
 let libraryPath: string;
 let userDataPath: string;
 
+/**
+ * The installed application binary, for the smoke test that runs on a tag
+ * against what was actually built. Returns null when there is no packaged build
+ * to point at, which is the normal case during development.
+ */
+function packagedExecutable(): string | null {
+  const candidates =
+    process.platform === 'darwin'
+      ? ['mac-arm64/Mindex.app/Contents/MacOS/Mindex', 'mac/Mindex.app/Contents/MacOS/Mindex']
+      : process.platform === 'win32'
+        ? ['win-unpacked/Mindex.exe']
+        : ['linux-unpacked/mindex'];
+
+  for (const candidate of candidates) {
+    const full = join(PROJECT_ROOT, 'release', candidate);
+    if (existsSync(full)) return full;
+  }
+  return null;
+}
+
 async function launch(): Promise<void> {
+  // Chromium's setuid sandbox cannot start as root, which is how Linux CI
+  // containers run. This does not affect the renderer's own sandbox, which is
+  // what the security test below actually checks.
+  const chromiumArgs = process.platform === 'linux' && process.getuid?.() === 0 ? ['--no-sandbox'] : [];
+
+  // On a tag, the release workflow re-runs the @smoke tests against the real
+  // installed binary rather than against out/ — that is the difference between
+  // "the code works" and "the thing we are about to publish works".
+  const packaged = process.env.MINDEX_E2E_PACKAGED ? packagedExecutable() : null;
+  if (process.env.MINDEX_E2E_PACKAGED && !packaged) {
+    throw new Error('MINDEX_E2E_PACKAGED is set, but there is no packaged build under release/.');
+  }
+
   app = await electron.launch({
-    args: [
-      join(PROJECT_ROOT, 'out', 'main', 'index.js'),
-      `--user-data-dir=${userDataPath}`,
-      // Chromium's setuid sandbox cannot start as root, which is how Linux CI
-      // containers run. This does not affect the renderer's own sandbox, which
-      // is what the security test below actually checks.
-      ...(process.platform === 'linux' && process.getuid?.() === 0 ? ['--no-sandbox'] : []),
-    ],
+    ...(packaged
+      ? { executablePath: packaged, args: [`--user-data-dir=${userDataPath}`, ...chromiumArgs] }
+      : {
+          args: [join(PROJECT_ROOT, 'out', 'main', 'index.js'), `--user-data-dir=${userDataPath}`, ...chromiumArgs],
+        }),
     cwd: PROJECT_ROOT,
     env: { ...process.env, NODE_ENV: 'test', MINDEX_LIBRARY: libraryPath },
   });
