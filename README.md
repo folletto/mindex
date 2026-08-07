@@ -174,8 +174,13 @@ tag reruns the full CI matrix and, only if it is green, builds and publishes ins
 Releases, then re-runs the `@smoke` tests against the packaged binary. The download page reads the
 releases API at load time, so it never needs redeploying.
 
-One-time repository setup: under **Settings → Pages**, set the source to **GitHub Actions**, or the
-`pages.yml` workflow will fail on its first run.
+Two one-time repository settings:
+
+- **Settings → Pages → Source: GitHub Actions**, or `pages.yml` fails on its first run.
+- A **`RELEASE_TOKEN`** secret — a personal access token with `contents: write`. GitHub does not
+  start new workflow runs from events created with the default `GITHUB_TOKEN`, so without this the
+  tag is created but `release.yml` never fires. You can always run **Release** manually against the
+  tag instead; the token just removes that step.
 
 ## Licence
 

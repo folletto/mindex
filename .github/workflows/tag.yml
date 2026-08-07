@@ -1,8 +1,16 @@
+# Tag on version bump — "bump the version, get a release", without the
+# fragility of building on every push. The tag stays the deterministic trigger
+# for release.yml; this only creates it when package.json says a new version has
+# landed on main. Idempotent: if the tag already exists it does nothing.
+#
+# One wrinkle worth knowing: GitHub deliberately does not start new workflow
+# runs from events created with the default GITHUB_TOKEN. So the tag push below
+# will NOT kick off release.yml unless RELEASE_TOKEN (a PAT with contents:write)
+# is configured. Without it the tag is still created correctly — you just have
+# to run Release by hand against it.
+
 name: Tag on version bump
 
-# "Commit a new version, get a release" — without the fragility of building on
-# every push. The tag stays the deterministic trigger; this just creates it when
-# package.json says a new version has landed on main.
 on:
   push:
     branches: [main]
@@ -19,6 +27,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # Push the tag as a real user if a PAT is available, so that the tag
+          # event reaches release.yml. Falls back to GITHUB_TOKEN, which still
+          # creates the tag but cannot trigger anything.
+          token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Create the tag if it does not exist
         run: |
@@ -35,4 +47,12 @@ jobs:
           git config user.email 'github-actions[bot]@users.noreply.github.com'
           git tag -a "${tag}" -m "Mindex ${version}"
           git push origin "${tag}"
-          echo "Pushed ${tag}; the release workflow takes it from here."
+
+          if [ -n "${RELEASE_TOKEN}" ]; then
+            echo "Pushed ${tag}; the release workflow takes it from here."
+          else
+            echo "Pushed ${tag}."
+            echo "::warning::RELEASE_TOKEN is not set, so this tag will not start the Release workflow. Run it manually against ${tag}."
+          fi
+        env:
+          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}

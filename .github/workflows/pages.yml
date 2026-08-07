@@ -1,7 +1,12 @@
+# Download page — deploys site/ to GitHub Pages.
+#
+# The page asks the GitHub releases API for the latest release in the visitor's
+# browser, so it never needs redeploying when a release goes out; this runs only
+# when the page itself changes. One-time setup: Settings → Pages → Source must
+# be "GitHub Actions", or the first run fails.
+
 name: Download page
 
-# The page reads the GitHub releases API at load time, so it does not need
-# rebuilding for every release — only when the page itself changes.
 on:
   push:
     branches: [main]

@@ -1,8 +1,25 @@
+# Release — turns a v*.*.* tag into installers on GitHub Releases.
+#
+#   verify  Re-runs the entire CI matrix against the tagged commit, so a red
+#           suite cannot ship. Everything below waits on it.
+#   build   macOS and Windows in parallel — no cross-compiling, each installer
+#           is built on its own OS. electron-builder packages and publishes the
+#           DMG/ZIP and the NSIS installer, then the @smoke end-to-end tests run
+#           against the *installed binary* rather than against out/.
+#
+# Signing is opt-in: set the CSC_* and APPLE_* secrets and the build signs and
+# notarizes itself. Without them it produces an unsigned build, which is fine
+# for a personal tool — see the install notes in the README.
+#
+# Can also be run by hand against an existing tag, which is how you recover if
+# the tag was pushed without a RELEASE_TOKEN (see tag.yml).
+
 name: Release
 
 on:
   push:
     tags: ['v*.*.*']
+  workflow_dispatch:
 
 permissions:
   contents: write

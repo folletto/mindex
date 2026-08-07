@@ -1,3 +1,16 @@
+# CI — every push and pull request, and reused wholesale by release.yml.
+#
+#   test  Ubuntu + macOS + Windows. Typecheck, lint, then the whole Vitest
+#         suite: unit, property, integration and the multi-process concurrency
+#         tests. All three platforms because SQLite's file locking differs
+#         between them, which is where the interesting bugs live.
+#   e2e   macOS + Windows. Builds the app and drives the real thing with
+#         Playwright.
+#
+# The two jobs are independent and run in parallel. Neither packages anything —
+# that only happens on a tag, in release.yml. Coverage is uploaded either way;
+# the Playwright report only when something fails.
+
 name: CI
 
 on:
