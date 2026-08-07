@@ -1,0 +1,104 @@
+# CI — runs on pull requests only, and is reused wholesale by release.yml.
+#
+# `pull_request` covers both opening a PR and every later push to its branch
+# (the `synchronize` activity), so a branch with no PR open costs nothing. The
+# trade-off is that a commit landing on main is not re-tested on its own; the
+# release workflow re-runs this entire matrix against the tagged commit before
+# it will publish anything, which is the check that actually gates shipping.
+#
+#   test  Ubuntu + macOS + Windows. Typecheck, lint, then the whole Vitest
+#         suite: unit, property, integration and the multi-process concurrency
+#         tests. All three platforms because SQLite's file locking differs
+#         between them, which is where the interesting bugs live.
+#   e2e   macOS + Windows. Builds the app and drives the real thing with
+#         Playwright.
+#
+# The two jobs are independent and run in parallel. Neither packages anything —
+# that only happens on a tag, in release.yml. Coverage is uploaded either way;
+# the Playwright report only when something fails.
+
+name: CI
+
+on:
+  pull_request:
+  workflow_call:
+
+# A newer commit on the same PR makes the older run pointless. github.ref is the
+# PR's merge ref here, so runs are grouped per pull request rather than per
+# branch — and when release.yml calls this workflow, per tag.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # The concurrency suite runs on all three: file locking semantics differ
+        # meaningfully between them, and that is exactly where the bugs live.
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit, property, integration and concurrency tests
+        run: npm run test -- --coverage
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.os }}
+          path: coverage/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  e2e:
+    name: End-to-end on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: Run Playwright against the built app
+        run: npm run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-${{ matrix.os }}
+          path: playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore

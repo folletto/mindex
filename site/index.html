@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mindex — a catalogue of your things</title>
+    <meta
+      name="description"
+      content="Mindex is an offline desktop catalogue for macOS and Windows. Everything lives in one folder you own."
+    />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232f6df6'/%3E%3Cg fill='white'%3E%3Ccircle cx='9' cy='11' r='1.6'/%3E%3Crect x='13' y='9.6' width='12' height='2.8' rx='1.4'/%3E%3Ccircle cx='9' cy='16' r='1.6'/%3E%3Crect x='13' y='14.6' width='9.5' height='2.8' rx='1.4'/%3E%3Ccircle cx='9' cy='21' r='1.6'/%3E%3Crect x='13' y='19.6' width='7' height='2.8' rx='1.4'/%3E%3C/g%3E%3C/svg%3E" />
+    <style>
+      :root {
+        --bg: #f6f6f7;
+        --bg-raised: #fff;
+        --border: #d9d9dd;
+        --text: #16161a;
+        --muted: #6b6b73;
+        --accent: #2f6df6;
+        --accent-text: #fff;
+        color-scheme: light dark;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #1b1b1e;
+          --bg-raised: #242428;
+          --border: #38383e;
+          --text: #ececef;
+          --muted: #9a9aa4;
+          --accent: #5a8dff;
+          --accent-text: #0d1220;
+        }
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        padding: 48px 20px 80px;
+        background: var(--bg);
+        color: var(--text);
+        font: 16px/1.6 -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      main { max-width: 680px; margin: 0 auto; }
+
+      h1 { font-size: 2.6rem; margin: 0 0 6px; letter-spacing: -0.025em; }
+      .tagline { font-size: 1.2rem; color: var(--muted); margin: 0 0 32px; }
+      h2 { font-size: 1.1rem; margin: 40px 0 10px; }
+
+      .download { margin: 32px 0; }
+
+      .primary-download {
+        display: inline-block;
+        background: var(--accent);
+        color: var(--accent-text);
+        font-weight: 600;
+        text-decoration: none;
+        padding: 13px 26px;
+        border-radius: 9px;
+      }
+
+      .primary-download:hover { filter: brightness(1.08); }
+
+      .version { color: var(--muted); font-size: 0.9rem; margin-top: 10px; }
+
+      ul.assets { list-style: none; padding: 0; margin: 16px 0 0; }
+
+      ul.assets li {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: baseline;
+        padding: 9px 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      ul.assets a { color: var(--accent); text-decoration: none; }
+      ul.assets a:hover { text-decoration: underline; }
+      .size { color: var(--muted); font-size: 0.88rem; white-space: nowrap; }
+
+      .card {
+        background: var(--bg-raised);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 18px 20px;
+        margin: 16px 0;
+      }
+
+      .card h3 { margin: 0 0 8px; font-size: 1rem; }
+      .card p:last-child { margin-bottom: 0; }
+
+      code {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        padding: 1px 5px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.9em;
+      }
+
+      pre {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        padding: 12px 14px;
+        overflow-x: auto;
+      }
+
+      pre code { border: none; background: none; padding: 0; }
+
+      .tree { color: var(--muted); font-size: 0.92rem; }
+
+      footer {
+        margin-top: 56px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      footer a { color: var(--accent); }
+      .muted { color: var(--muted); }
+    </style>
+  </head>
+
+  <body>
+    <main>
+      <h1>Mindex</h1>
+      <p class="tagline">A catalogue of your things, kept in a folder you own.</p>
+
+      <p>
+        Mindex keeps a list of items — tools, parts, equipment, whatever you need to find again — with notes,
+        your own custom fields, and the manuals and photos that go with them. It runs entirely on your
+        machine. There is no account, no server, and nothing to sign up for.
+      </p>
+
+      <section class="download">
+        <div id="primary">
+          <p class="muted">Looking for the latest release…</p>
+        </div>
+        <p class="version" id="version"></p>
+        <ul class="assets" id="assets"></ul>
+        <p class="version">
+          <a href="https://github.com/folletto/mindex/releases/latest">All releases on GitHub</a>
+        </p>
+      </section>
+
+      <h2>Everything lives in one folder</h2>
+      <p>
+        You pick the folder on first launch. Inside it, Mindex keeps a small database file and one subfolder
+        per item holding that item's attachments:
+      </p>
+      <pre class="tree"><code>My Catalogue/
+├─ catalogue.db
+├─ data/
+│  ├─ acme-widget-mk2/
+│  │  ├─ datasheet.pdf
+│  │  └─ photo.jpg
+│  └─ bosch-gsb-13-re/
+│     └─ manual.pdf
+└─ deleted/</code></pre>
+      <p>
+        Put that folder in Dropbox, iCloud or Syncthing and several machines can share one catalogue. Open it
+        in Finder or Explorer and everything is where you would expect. Stop using Mindex tomorrow and your
+        files are still just files.
+      </p>
+
+      <h2>Deleting never destroys anything</h2>
+      <p>
+        Moving an item to the trash moves its folder into <code>deleted/</code> with a timestamp. Nothing is
+        removed from disk — if you want the bytes gone, you delete them yourself, deliberately, in your file
+        manager.
+      </p>
+
+      <h2>Installing</h2>
+
+      <div class="card">
+        <h3>macOS</h3>
+        <p>
+          Builds are currently unsigned, so the first launch needs a right-click on the app and then
+          <strong>Open</strong> — double-clicking will show a warning and refuse. You only have to do this
+          once. If macOS still refuses:
+        </p>
+        <pre><code>xattr -d com.apple.quarantine /Applications/Mindex.app</code></pre>
+      </div>
+
+      <div class="card">
+        <h3>Windows</h3>
+        <p>
+          SmartScreen will warn about an unrecognised publisher until the download builds a reputation.
+          Choose <strong>More info</strong> and then <strong>Run anyway</strong>.
+        </p>
+      </div>
+
+      <footer>
+        <p>
+          Open source on <a href="https://github.com/folletto/mindex">GitHub</a>. macOS and Windows.
+        </p>
+      </footer>
+    </main>
+
+    <script>
+      // Progressive enhancement: the "all releases" link above works with no
+      // JavaScript at all, and this only ever upgrades the experience.
+      (function () {
+        const REPO = 'folletto/mindex';
+
+        const primary = document.getElementById('primary');
+        const versionLine = document.getElementById('version');
+        const assetList = document.getElementById('assets');
+
+        /** Best guess at what the visitor should download, from the UA. */
+        function detectPlatform() {
+          const data = navigator.userAgentData;
+          const ua = navigator.userAgent;
+          const platform = (data && data.platform) || ua;
+
+          if (/Win/i.test(platform)) return { os: 'windows', label: 'Windows' };
+          if (/Mac/i.test(platform)) {
+            // Apple Silicon does not announce itself in the UA string. The
+            // renderer name is the usual tell; when it is absent we offer the
+            // Intel build, which runs everywhere through Rosetta.
+            const isAppleSilicon =
+              (data && data.architecture === 'arm') ||
+              /Apple\s?M\d/i.test(ua) ||
+              (function () {
+                try {
+                  const canvas = document.createElement('canvas');
+                  const gl = canvas.getContext('webgl');
+                  const info = gl && gl.getExtension('WEBGL_debug_renderer_info');
+                  const renderer = info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : '';
+                  return /Apple\s?M\d/i.test(String(renderer));
+                } catch (error) {
+                  return false;
+                }
+              })();
+            return isAppleSilicon
+              ? { os: 'mac', arch: 'arm64', label: 'macOS (Apple Silicon)' }
+              : { os: 'mac', arch: 'x64', label: 'macOS (Intel)' };
+          }
+          return null;
+        }
+
+        function pickAsset(assets, platform) {
+          if (!platform) return null;
+          if (platform.os === 'windows') {
+            return assets.find((asset) => /\.exe$/i.test(asset.name)) || null;
+          }
+          const dmgs = assets.filter((asset) => /\.dmg$/i.test(asset.name));
+          return (
+            dmgs.find((asset) => asset.name.toLowerCase().includes(platform.arch)) ||
+            dmgs.find((asset) => !/arm64|x64/i.test(asset.name)) ||
+            dmgs[0] ||
+            null
+          );
+        }
+
+        function formatSize(bytes) {
+          if (!bytes) return '';
+          const mb = bytes / 1000 / 1000;
+          return mb >= 1000 ? (mb / 1000).toFixed(1) + ' GB' : mb.toFixed(1) + ' MB';
+        }
+
+        function fallback(message) {
+          primary.innerHTML =
+            '<a class="primary-download" href="https://github.com/' +
+            REPO +
+            '/releases/latest">Download from GitHub</a>';
+          versionLine.textContent = message;
+        }
+
+        // The unauthenticated API allows 60 requests an hour per IP, so a
+        // rate-limited visitor has to get the manual link rather than nothing.
+        fetch('https://api.github.com/repos/' + REPO + '/releases/latest', {
+          headers: { Accept: 'application/vnd.github+json' },
+        })
+          .then(function (response) {
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            return response.json();
+          })
+          .then(function (release) {
+            const assets = (release.assets || []).filter(function (asset) {
+              // .yml and .blockmap are update metadata, not downloads.
+              return !/\.(yml|blockmap)$/i.test(asset.name);
+            });
+
+            if (assets.length === 0) {
+              fallback('No installers in the latest release yet.');
+              return;
+            }
+
+            const platform = detectPlatform();
+            const best = pickAsset(assets, platform);
+
+            if (best) {
+              primary.innerHTML = '';
+              const link = document.createElement('a');
+              link.className = 'primary-download';
+              link.href = best.browser_download_url;
+              link.textContent = 'Download for ' + platform.label;
+              primary.appendChild(link);
+            } else {
+              primary.innerHTML =
+                '<a class="primary-download" href="https://github.com/' +
+                REPO +
+                '/releases/latest">Download</a>';
+            }
+
+            const published = release.published_at ? new Date(release.published_at) : null;
+            versionLine.textContent =
+              (release.tag_name || '') + (published ? ' · released ' + published.toISOString().slice(0, 10) : '');
+
+            assets.forEach(function (asset) {
+              const item = document.createElement('li');
+              const link = document.createElement('a');
+              link.href = asset.browser_download_url;
+              link.textContent = asset.name;
+              const size = document.createElement('span');
+              size.className = 'size';
+              size.textContent = formatSize(asset.size);
+              item.appendChild(link);
+              item.appendChild(size);
+              assetList.appendChild(item);
+            });
+          })
+          .catch(function () {
+            fallback('Could not reach the GitHub API — the link above always works.');
+          });
+      })();
+    </script>
+  </body>
+</html>

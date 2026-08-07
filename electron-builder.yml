@@ -1,0 +1,68 @@
+appId: id.folletto.mindex
+productName: Mindex
+copyright: Copyright © 2026 folletto
+
+directories:
+  buildResources: build
+  output: release
+
+files:
+  - out/**
+  - package.json
+  - '!**/*.map'
+  - '!**/{.eslintrc,.editorconfig,.prettierrc,tsconfig*.json}'
+
+# better-sqlite3 is native, so its .node binary has to stay outside the asar
+# archive to be loadable. It ships N-API prebuilds, which are ABI-stable across
+# both Node and Electron, so there is nothing to rebuild -- and compiling from
+# source against Electron headers would only add a way for the build to fail.
+asar: true
+asarUnpack:
+  - '**/node_modules/better-sqlite3/**'
+npmRebuild: false
+
+# The library folder is the source of truth, so an uninstall must never take a
+# user's catalogue with it. Nothing outside the app directory is ours to remove.
+mac:
+  category: public.app-category.productivity
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    - target: zip # electron-updater needs the zip; the dmg is what people download
+      arch: [arm64, x64]
+  # electron-builder derives the .icns from this at package time.
+  icon: build/icon.png
+  darkModeSupport: true
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  # Unsigned builds are fine for a personal tool; Gatekeeper asks for a
+  # right-click → Open the first time. See README.
+  identity: null
+
+dmg:
+  artifactName: ${productName}-${version}-${arch}.${ext}
+  contents:
+    - { x: 130, y: 220 }
+    - { x: 410, y: 220, type: link, path: /Applications }
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  # electron-builder derives the .ico from this at package time.
+  icon: build/icon.png
+
+nsis:
+  artifactName: ${productName}-${version}-Setup.${ext}
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+
+publish:
+  provider: github
+  owner: folletto
+  repo: mindex
+  releaseType: release

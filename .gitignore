@@ -1,0 +1,21 @@
+node_modules/
+out/
+dist/
+release/
+coverage/
+.vite/
+*.tsbuildinfo
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Local env
+.env
+.env.local

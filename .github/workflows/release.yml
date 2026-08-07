@@ -1,0 +1,84 @@
+# Release — turns a v*.*.* tag into installers on GitHub Releases.
+#
+#   verify  Re-runs the entire CI matrix against the tagged commit, so a red
+#           suite cannot ship. Everything below waits on it.
+#   build   macOS and Windows in parallel — no cross-compiling, each installer
+#           is built on its own OS. electron-builder packages and publishes the
+#           DMG/ZIP and the NSIS installer, then the @smoke end-to-end tests run
+#           against the *installed binary* rather than against out/.
+#
+# Signing is opt-in: set the CSC_* and APPLE_* secrets and the build signs and
+# notarizes itself. Without them it produces an unsigned build, which is fine
+# for a personal tool — see the install notes in the README.
+#
+# Can also be run by hand against an existing tag, which is how you recover if
+# the tag was pushed without a RELEASE_TOKEN (see tag.yml).
+
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # A red suite cannot ship. This reruns the full matrix against the tagged
+  # commit rather than trusting that the branch was green at some point.
+  verify:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    name: Build for ${{ matrix.os }}
+    needs: verify
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # No cross-compiling: the macOS installers must be built on macOS and
+        # the Windows installer on Windows.
+        os: [macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: Package and publish
+        run: npx electron-builder --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Signing is opt-in: set these secrets and the build signs itself.
+          # Without them electron-builder produces an unsigned build, which is
+          # fine for a personal tool — see the install notes in the README.
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Smoke-test the artifact
+        run: npm run test:e2e -- --grep "@smoke"
+        env:
+          MINDEX_E2E_PACKAGED: '1'
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: installers-${{ matrix.os }}
+          path: |
+            release/*.dmg
+            release/*.zip
+            release/*.exe
+            release/*.yml
+          retention-days: 14
+          if-no-files-found: warn
