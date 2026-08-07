@@ -1,4 +1,10 @@
-# CI — every push and pull request, and reused wholesale by release.yml.
+# CI — runs on pull requests only, and is reused wholesale by release.yml.
+#
+# `pull_request` covers both opening a PR and every later push to its branch
+# (the `synchronize` activity), so a branch with no PR open costs nothing. The
+# trade-off is that a commit landing on main is not re-tested on its own; the
+# release workflow re-runs this entire matrix against the tagged commit before
+# it will publish anything, which is the check that actually gates shipping.
 #
 #   test  Ubuntu + macOS + Windows. Typecheck, lint, then the whole Vitest
 #         suite: unit, property, integration and the multi-process concurrency
@@ -14,12 +20,12 @@
 name: CI
 
 on:
-  push:
-    branches: ['**']
   pull_request:
   workflow_call:
 
-# A newer push to the same branch makes the older run pointless.
+# A newer commit on the same PR makes the older run pointless. github.ref is the
+# PR's merge ref here, so runs are grouped per pull request rather than per
+# branch — and when release.yml calls this workflow, per tag.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
