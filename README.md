@@ -111,6 +111,7 @@ matter is `asarUnpack`, since a `.node` binary cannot be loaded from inside an a
 | `npm run test:coverage` | The same, with the 90% gate on `src/main` and `src/shared` |
 | `npm run test:e2e` | Playwright against the built app (run `npm run build` first) |
 | `npm run lint` | ESLint, including the rules that keep the renderer sandboxed |
+| `npm run pack` | Build an unpacked app into `release/`, without making an installer |
 | `npm run dist` | Build installers into `release/` |
 
 ### Layout
@@ -166,6 +167,74 @@ Add `src/main/db/migrations/00N_what_it_does.sql`. Never edit an existing one �
 chain step by step and compares the resulting schema against a from-scratch apply, which is what
 catches that mistake. Migrations run in one exclusive transaction, after backing the database up, and
 an app that meets a library from a newer version refuses to write to it rather than guessing.
+
+## Building
+
+`npm run build` compiles TypeScript and bundles into `out/`. That is what `npm run dev` and the
+end-to-end tests run against, and it is *not* an application — packaging is a separate step.
+
+| Command | What you get |
+|---|---|
+| `npm run build` | Compiled `out/`. No app bundle. |
+| `npm run pack` | An unpacked app under `release/` (`mac/`, `win-unpacked/`). The quickest way to check a real bundle. |
+| `npm run dist` | Installers under `release/`, for **the platform you are on**. |
+
+Both `pack` and `dist` run `npm run build` first, so the typecheck gates them too.
+
+The rule that shapes everything below: **electron-builder packages for the machine it runs on.** This
+project does not cross-compile, and the release workflow builds each installer on its own OS.
+
+### macOS
+
+`npm run dist` on a Mac writes `Mindex-<version>-arm64.dmg` and `-x64.dmg` into `release/`, plus the
+matching zips that electron-updater reads. The build is unsigned unless the `CSC_*` and `APPLE_*`
+variables are present — see [Installing](#installing) for what that costs the person opening it.
+
+### Windows
+
+**A Windows installer is built on Windows.** Reaching for `npx electron-builder --win` on a Mac gets
+as far as the NSIS step and stops: electron-builder produces the uninstaller by *running* it, which
+on a non-Windows host means running a Windows executable through Wine (`WineVmManager`). With no
+`wine` on `PATH`, that step fails.
+
+Worth knowing, because it is the thing people usually expect to be the problem and it is not: the
+native dependency is fine. `better-sqlite3` ships N-API prebuilds for every platform *inside the
+package* — `prebuilds/win32-x64.node` and the rest are all there after a plain `npm ci` on any OS —
+and `asarUnpack` keeps the whole module outside the asar archive so the right one can be loaded. It
+is NSIS that pins the build to Windows, not the database.
+
+That leaves two honest routes:
+
+1. **On a Windows machine** — `npm ci && npm run dist`, which writes
+   `release/Mindex-<version>-Setup.exe`: NSIS, x64, per-user, install directory changeable.
+2. **In CI** — the Release workflow already runs a `windows-latest` job for exactly this reason. This
+   is the recommended route, and the only one that needs no Windows hardware.
+
+### Getting a Windows installer out of CI
+
+`release.yml` has a `workflow_dispatch` trigger, so it can be run by hand against a branch without
+tagging anything:
+
+```sh
+gh workflow run Release --ref main
+gh run watch
+```
+
+The `build` job uploads every installer it made as a run artifact, which is the part you want:
+
+```sh
+gh run download <run-id> --name installers-windows-latest
+```
+
+Two things to be aware of before dispatching a run:
+
+- **`verify` gates everything.** The `build` job `needs: verify`, which re-runs the entire CI matrix —
+  including the Windows end-to-end suite — against the commit. A red suite means no installer is
+  built at all, which is the intended behaviour and not a misconfiguration.
+- **A dispatched run still publishes.** The packaging step is `electron-builder --publish always`, so
+  it creates or updates a GitHub Release rather than only leaving artifacts behind. If you want an
+  `.exe` to test and nothing public, build on a Windows machine, or change that step to
+  `--publish never` for the run.
 
 ## Releasing
 
