@@ -1,4 +1,5 @@
-# CI — runs on pull requests only, and is reused wholesale by release.yml.
+# CI — runs on pull requests (bar documentation-only ones), and is reused
+# wholesale by release.yml.
 #
 # `pull_request` covers both opening a PR and every later push to its branch
 # (the `synchronize` activity), so a branch with no PR open costs nothing. The
@@ -21,6 +22,21 @@ name: CI
 
 on:
   pull_request:
+    # A documentation-only pull request cannot break the suite, so it does not
+    # pay for three platforms of tests plus two of Electron builds. GitHub skips
+    # the run only when *every* changed file matches, so a PR that touches code
+    # and its README still runs in full.
+    #
+    # This is safe only because nothing requires this check: main has neither
+    # branch protection nor rulesets. A skipped run reports no status at all, so
+    # the day required status checks are turned on, such a PR would wait forever
+    # for a check that is never coming — at which point this has to become a
+    # filter job that reports success rather than a skipped workflow.
+    #
+    # `paths-ignore` does not apply to `workflow_call`, so release.yml still runs
+    # the whole matrix against a tag no matter what the last commit touched.
+    paths-ignore:
+      - '**.md'
   workflow_call:
 
 # A newer commit on the same PR makes the older run pointless. github.ref is the
