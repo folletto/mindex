@@ -4,6 +4,12 @@ Offline Electron desktop app (React renderer + SQLite via `better-sqlite3`) over
 library folder. This file is the short version for making changes; `docs/architecture.md` holds the
 full rationale, `docs/setup.md` the manual configuration, README.md the product overview.
 
+## Starting a session
+
+**Pull `main` before doing anything else.** At the start of every chat, `git pull --ff-only` on `main`
+(fetch and fast-forward, don't merge) so the work starts from the current tree — this file, the docs
+and the migration chain all go stale fast otherwise.
+
 ## Layout
 
 ```
