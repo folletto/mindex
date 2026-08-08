@@ -181,7 +181,3 @@ Two one-time repository settings:
   start new workflow runs from events created with the default `GITHUB_TOKEN`, so without this the
   tag is created but `release.yml` never fires. You can always run **Release** manually against the
   tag instead; the token just removes that step.
-
-## Licence
-
-MIT.
