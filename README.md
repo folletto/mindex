@@ -95,8 +95,9 @@ project does not cross-compile, and the release workflow builds each installer o
 ### macOS
 
 `npm run dist` on a Mac writes `Mindex-<version>-arm64.dmg` and `-x64.dmg` into `release/`, plus the
-matching zips that electron-updater reads. The build is unsigned unless the `CSC_*` and `APPLE_*`
-variables are present — see [Installing](#installing) for what that costs the person opening it.
+`-arm64-mac.zip` and `-x64-mac.zip` that electron-updater reads. The build is unsigned unless the
+`CSC_*` and `APPLE_*` variables are present — see [Installing](#installing) for what that costs the
+person opening it.
 
 ### Windows
 
