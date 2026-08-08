@@ -38,6 +38,15 @@ on:
     paths-ignore:
       - '**.md'
   workflow_call:
+    inputs:
+      # release.yml can bump the version and commit before building, so the
+      # commit that ships is not always the one that started the run. It passes
+      # that sha here so the suite runs against the tree being packaged. Empty
+      # (the default, and every `pull_request` run) checks out the usual ref.
+      ref:
+        description: 'Commit to test. Defaults to the ref that triggered the run.'
+        required: false
+        type: string
 
 # A newer commit on the same PR makes the older run pointless. github.ref is the
 # PR's merge ref here, so runs are grouped per pull request rather than per
@@ -62,6 +71,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
 
       - uses: actions/setup-node@v7
         with:
@@ -98,6 +109,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
 
       - uses: actions/setup-node@v7
         with:

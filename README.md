@@ -95,8 +95,9 @@ project does not cross-compile, and the release workflow builds each installer o
 ### macOS
 
 `npm run dist` on a Mac writes `Mindex-<version>-arm64.dmg` and `-x64.dmg` into `release/`, plus the
-matching zips that electron-updater reads. The build is unsigned unless the `CSC_*` and `APPLE_*`
-variables are present — see [Installing](#installing) for what that costs the person opening it.
+`-arm64-mac.zip` and `-x64-mac.zip` that electron-updater reads. The build is unsigned unless the
+`CSC_*` and `APPLE_*` variables are present — see [Installing](#installing) for what that costs the
+person opening it.
 
 ### Windows
 
@@ -139,17 +140,40 @@ Two things to be aware of before dispatching a run:
 - **`verify` gates everything.** The `build` job `needs: verify`, which re-runs the entire CI matrix —
   including the Windows end-to-end suite — against the commit. A red suite means no installer is
   built at all, which is the intended behaviour and not a misconfiguration.
-- **A dispatched run still publishes.** The packaging step is `electron-builder --publish always`, so
-  it creates or updates a GitHub Release rather than only leaving artifacts behind. If you want an
-  `.exe` to test and nothing public, build on a Windows machine, or change that step to
-  `--publish never` for the run.
+- **A dispatched run still publishes.** The `build` jobs package with `--publish never` and only
+  upload artifacts, but the `publish` job that follows them attaches everything to a GitHub Release.
+  If you want an `.exe` to test and nothing public, build on a Windows machine.
 
 ## Releasing
 
-`npm version patch|minor|major` and push. A workflow turns the version bump into a `v*.*.*` tag; the
-tag reruns the full CI matrix and, only if it is green, builds and publishes installers to GitHub
-Releases, then re-runs the `@smoke` tests against the packaged binary. The download page reads the
-releases API at load time, so it never needs redeploying.
+Two ways in, both ending in the same place.
 
-This depends on two one-time repository settings — the Pages source and a `RELEASE_TOKEN` secret.
-Both are in [docs/setup.md](docs/setup.md#github-repository).
+**Run the workflow.** `release.yml` takes two `workflow_dispatch` inputs:
+
+| Input | Effect |
+|---|---|
+| `version` | `0.0.0`, `v0.0.0` or `0.0.0-pre`. Bumps `package.json`, commits it as `vX.Y.Z`, tags it, then releases that commit. Leave it empty to release the current version as it stands. |
+| `channel` | `auto` marks the release as a pre-release when the version has a suffix; `release` and `prerelease` decide it outright. |
+
+```sh
+gh workflow run Release --ref main -f version=0.2.0 -f channel=release
+gh run watch
+```
+
+A version that is not *later* than the current one is refused before anything is built, by semver
+precedence — so `0.2.0-pre` over `0.1.0` is fine, while `0.0.9` or a re-release of the same
+pre-release is not.
+
+**Or bump it yourself.** `npm version patch|minor|major` and push: `tag.yml` turns the version bump
+into a `v*.*.*` tag, and the tag starts the same release. This is the path that needs the
+`RELEASE_TOKEN` secret — see [docs/setup.md](docs/setup.md#github-repository).
+
+Either way the tag reruns the full CI matrix against the exact commit being packaged and, only if it
+is green, builds both platforms, re-runs the `@smoke` tests against the packaged binary, and attaches
+every installer in one pass. The download page reads the releases API at load time, so it never needs
+redeploying.
+
+**Why one job does all the attaching.** Each `build` job used to publish for itself, which raced:
+whichever finished second could take the other's installers off the release, and v0.1.0 shipped
+macOS-only as a result. Packaging and publishing are now separate steps, and `publish` refuses to
+attach anything unless both platforms' installers *and* both `electron-updater` feeds are present.

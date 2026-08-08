@@ -24,6 +24,12 @@ npmRebuild: false
 # The library folder is the source of truth, so an uninstall must never take a
 # user's catalogue with it. Nothing outside the app directory is ours to remove.
 mac:
+  # Name every mac artifact with its architecture. electron-builder drops the
+  # arch from its *default* pattern when it is the platform default (x64), which
+  # is why the dmg below was `-x64.dmg` while the zip beside it was a bare
+  # `-mac.zip`. Setting the pattern explicitly forces `${arch}` to expand for
+  # x64 too, so the zips match the dmgs. `dmg.artifactName` still wins for dmgs.
+  artifactName: ${productName}-${version}-${arch}-mac.${ext}
   category: public.app-category.productivity
   target:
     - target: dmg
