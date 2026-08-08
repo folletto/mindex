@@ -1,18 +1,27 @@
-# Release — turns a v*.*.* tag into installers on GitHub Releases.
+# Release — turns a version into installers on GitHub Releases.
 #
-#   verify  Re-runs the entire CI matrix against the tagged commit, so a red
-#           suite cannot ship. Everything below waits on it.
-#   build   macOS and Windows in parallel — no cross-compiling, each installer
-#           is built on its own OS. electron-builder packages and publishes the
-#           DMG/ZIP and the NSIS installer, then the @smoke end-to-end tests run
-#           against the *installed binary* rather than against out/.
+#   version  Resolves what is being released, and optionally bumps to it first:
+#            validates the requested version, refuses to go backwards, commits
+#            the bump as `vX.Y.Z` and tags it. Everything below builds that sha.
+#   verify   Re-runs the entire CI matrix against the sha being shipped, so a red
+#            suite cannot ship.
+#   build    macOS and Windows in parallel — no cross-compiling, each installer
+#            is built on its own OS. Packaging is `--publish never`: the jobs
+#            produce files and upload them as run artifacts, and publish nothing.
+#            The @smoke end-to-end tests then run against the *installed binary*
+#            rather than against out/.
+#   publish  One job, after both builds, that attaches every file to the release
+#            in a single pass.
+#
+# Why publishing is a separate job: when each build job published for itself,
+# whichever finished second raced the first and the macOS run took the Windows
+# installer off the release with it — v0.1.0 shipped mac-only. Nothing here now
+# depends on the order the builds finish in, and `publish` fails loudly if any
+# platform's files are missing rather than shipping a half release.
 #
 # Signing is opt-in: set the CSC_* and APPLE_* secrets and the build signs and
 # notarizes itself. Without them it produces an unsigned build, which is fine
 # for a personal tool — see the install notes in the README.
-#
-# Can also be run by hand against an existing tag, which is how you recover if
-# the tag was pushed without a RELEASE_TOKEN (see tag.yml).
 
 name: Release
 
@@ -20,19 +29,145 @@ on:
   push:
     tags: ['v*.*.*']
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release — 0.0.0, v0.0.0 or 0.0.0-pre. Empty builds the current version.'
+        required: false
+        type: string
+      channel:
+        description: 'How to mark the release'
+        required: false
+        default: auto
+        type: choice
+        options:
+          # auto reads it off the version: a suffix (0.2.0-pre) is a
+          # pre-release, a plain 0.2.0 is a release.
+          - auto
+          - release
+          - prerelease
+
+# Two release runs must never interleave — they would fight over the same tag
+# and the same set of assets. Queue them instead of cancelling: a run that has
+# already pushed a version bump should be allowed to finish shipping it.
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 permissions:
   contents: write
 
 jobs:
-  # A red suite cannot ship. This reruns the full matrix against the tagged
-  # commit rather than trusting that the branch was green at some point.
+  # Resolve the version being shipped, bumping and tagging first when one was
+  # requested. Everything downstream uses this job's `sha`, never github.sha.
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      tag: ${{ steps.resolve.outputs.tag }}
+      sha: ${{ steps.resolve.outputs.sha }}
+      prerelease: ${{ steps.resolve.outputs.prerelease }}
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Full history so the bump commit can be pushed from a non-shallow
+          # clone. The default GITHUB_TOKEN is deliberate: GitHub does not start
+          # new workflow runs from events it creates, so the commit and tag
+          # pushed below cannot set tag.yml or a second Release run going. This
+          # run is already the one doing the release.
+          fetch-depth: 0
+
+      - name: Resolve the version
+        id: resolve
+        env:
+          REQUESTED: ${{ inputs.version }}
+          CHANNEL: ${{ inputs.channel || 'auto' }}
+        run: |
+          set -euo pipefail
+
+          current="$(node -p "require('./package.json').version")"
+          requested="$(printf '%s' "${REQUESTED:-}" | tr -d '[:space:]')"
+          sha="${GITHUB_SHA}"
+
+          if [ -n "${requested}" ]; then
+            # One optional leading v, then X.Y.Z, then an optional -suffix.
+            candidate="${requested#v}"
+            if ! printf '%s' "${candidate}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
+              echo "::error::'${requested}' is not a version. Use 0.0.0, v0.0.0 or 0.0.0-pre."
+              exit 1
+            fi
+
+            if [ "${candidate}" = "${current}" ]; then
+              echo "Already at ${current} — nothing to bump."
+            else
+              # Compare by sorting, not by range matching: a range like
+              # ">0.1.0" deliberately excludes pre-releases of other versions,
+              # so it would reject 0.2.0-pre over 0.1.0. Sorting uses plain
+              # semver precedence — 0.1.0 < 0.2.0-pre < 0.2.0 — which is what
+              # "later" has to mean here.
+              highest="$(npx --yes semver@7 "${candidate}" "${current}" | tail -1)"
+              if [ "${highest}" != "${candidate}" ]; then
+                echo "::error::${candidate} is not later than the current version ${current}. Refusing to release an earlier version."
+                exit 1
+              fi
+
+              if [ "${GITHUB_REF_TYPE}" != "branch" ]; then
+                echo "::error::A version bump has to be committed to a branch, but this run is against ${GITHUB_REF_TYPE} ${GITHUB_REF_NAME}. Dispatch it against main instead."
+                exit 1
+              fi
+
+              echo "Bumping ${current} → ${candidate}."
+              npm version "${candidate}" --no-git-tag-version
+
+              git config user.name  'github-actions[bot]'
+              git config user.email 'github-actions[bot]@users.noreply.github.com'
+              git add package.json package-lock.json
+              git commit -m "v${candidate}"
+              git tag -a "v${candidate}" -m "Mindex ${candidate}"
+              git push origin "HEAD:refs/heads/${GITHUB_REF_NAME}"
+              git push origin "refs/tags/v${candidate}"
+
+              sha="$(git rev-parse HEAD)"
+            fi
+            version="${candidate}"
+          else
+            # Nothing requested: ship whatever package.json says at this ref.
+            version="${current}"
+          fi
+
+          # electron-builder names every artifact from package.json, so a tag
+          # that disagrees with it would attach the wrong files to the release.
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match package.json (${version}); the artifacts would be named for the wrong version."
+            exit 1
+          fi
+
+          case "${CHANNEL}" in
+            release) prerelease=false ;;
+            prerelease) prerelease=true ;;
+            *) case "${version}" in *-*) prerelease=true ;; *) prerelease=false ;; esac ;;
+          esac
+
+          {
+            echo "version=${version}"
+            echo "tag=v${version}"
+            echo "sha=${sha}"
+            echo "prerelease=${prerelease}"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Releasing ${version} from ${sha} (prerelease: ${prerelease})."
+
+  # A red suite cannot ship. This reruns the full matrix against the commit being
+  # packaged rather than trusting that the branch was green at some point.
   verify:
+    needs: version
     uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ needs.version.outputs.sha }}
 
   build:
     name: Build for ${{ matrix.os }}
-    needs: verify
+    needs: [version, verify]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -43,6 +178,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.version.outputs.sha }}
 
       - uses: actions/setup-node@v7
         with:
@@ -53,10 +190,13 @@ jobs:
 
       - run: npm run build
 
-      - name: Package and publish
-        run: npx electron-builder --publish always
+      - name: Package
+        # `--publish never` — this job ships nothing itself. It still writes the
+        # electron-updater feeds (latest-mac.yml, latest.yml) next to the
+        # installers, because electron-builder generates those from the `publish`
+        # block in electron-builder.yml regardless of the publish policy.
+        run: npx electron-builder --publish never
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Signing is opt-in: set these secrets and the build signs itself.
           # Without them electron-builder produces an unsigned build, which is
           # fine for a personal tool — see the install notes in the README.
@@ -71,14 +211,80 @@ jobs:
         env:
           MINDEX_E2E_PACKAGED: '1'
 
+      # These artifacts are how the files reach the publish job, so a missing
+      # one has to fail the build rather than warn. Two things in release/ are
+      # build by-products rather than things to ship: the NSIS uninstaller is an
+      # intermediate, and builder-debug.yml is electron-builder's own log.
       - uses: actions/upload-artifact@v7
-        if: always()
         with:
           name: installers-${{ matrix.os }}
           path: |
             release/*.dmg
             release/*.zip
             release/*.exe
+            release/*.blockmap
             release/*.yml
+            !release/*.__uninstaller.exe
+            !release/builder-debug.yml
           retention-days: 14
-          if-no-files-found: warn
+          if-no-files-found: error
+
+  # Everything lands on the release from here, in one job, in one pass. No other
+  # job touches the release, so the order the builds finished in cannot matter.
+  publish:
+    needs: [version, build]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: installers-*
+          merge-multiple: true
+          path: dist
+
+      - name: Check every platform is present
+        run: |
+          set -euo pipefail
+          ls -la dist
+
+          missing=0
+          require() {
+            if ! compgen -G "dist/$1" >/dev/null; then
+              echo "::error::No file matching '$1' — refusing to publish a partial release."
+              missing=1
+            fi
+          }
+
+          require '*.dmg'          # macOS installers
+          require '*-mac.zip'      # what electron-updater reads on macOS
+          require '*Setup.exe'     # Windows installer
+          require 'latest-mac.yml' # macOS update feed
+          require 'latest.yml'     # Windows update feed
+
+          [ "${missing}" -eq 0 ]
+
+      - name: Attach everything to ${{ needs.version.outputs.tag }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.version.outputs.tag }}
+          VERSION: ${{ needs.version.outputs.version }}
+          SHA: ${{ needs.version.outputs.sha }}
+          PRERELEASE: ${{ needs.version.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            # Re-running a release: replace the files, leave the notes alone.
+            echo "Updating the existing ${TAG} release."
+            gh release upload "${TAG}" dist/* --clobber
+            gh release edit "${TAG}" --draft=false --prerelease="${PRERELEASE}"
+          else
+            echo "Creating the ${TAG} release."
+            gh release create "${TAG}" dist/* \
+              --target "${SHA}" \
+              --title "${VERSION}" \
+              --generate-notes \
+              --prerelease="${PRERELEASE}"
+          fi
+
+          gh release view "${TAG}" --json assets --jq '.assets[].name'

@@ -50,8 +50,11 @@ A personal access token with `contents: write`, added under **Settings → Secre
 Actions**. GitHub deliberately does not start new workflow runs from events created with the default
 `GITHUB_TOKEN`, so without this the version-bump tag is created but `release.yml` never fires.
 
-It is a convenience, not a requirement: you can always run **Release** manually against the tag
-instead. `tag.yml` falls back to `GITHUB_TOKEN` and prints a warning saying exactly that.
+It is a convenience, not a requirement, and it only matters for the bump-and-push path. Running
+**Release** by hand with its `version` input does the bump, the commit, the tag and the release inside
+one run, which needs nothing but the default token — that run pushes with `GITHUB_TOKEN` precisely so
+it cannot set `tag.yml` or a second release run going behind it. `tag.yml` also falls back to
+`GITHUB_TOKEN` and prints a warning saying the tag it just made will not start anything.
 
 ### 3. Code signing (optional)
 
