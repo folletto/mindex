@@ -50,6 +50,19 @@ npm run dist         # installers into release/
 - `better-sqlite3` is native and uses N-API prebuilds: no rebuild step, `npmRebuild: false`,
   `asarUnpack` required. Don't add a `postinstall` rebuild.
 
+## Commit as you go
+
+Don't save the work up for one commit at the end. **Every time a coherent part of the work is
+finished, commit it and push** — no need to ask first.
+
+- Split by what changed and why, not by file. A refactor, the feature it enables and a docs update
+  are three commits; six files serving one change are one.
+- Never commit on `main` — branch first, then push with `-u` on the first push of that branch.
+- Run the checks below before each commit, not just at the end. Don't commit a broken tree; if the
+  work is half-done, finish that part or leave it uncommitted.
+- Message says what changed and why. End with `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`.
+- Opening or updating a PR stays an explicit request.
+
 ## Before finishing a change
 
 `npm run typecheck && npm run lint && npm test`. Touching main/shared? Check coverage stays above the
