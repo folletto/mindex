@@ -73,6 +73,14 @@ download page rather than updating itself. `electron-builder.yml` also sets `ide
 
 `GH_TOKEN` for publishing is the automatic `GITHUB_TOKEN` — nothing to configure.
 
+### If you ever turn on required status checks
+
+`ci.yml` skips documentation-only pull requests via `paths-ignore: ['**.md']`, which is safe today
+because `main` has no branch protection and no rulesets. A skipped workflow reports no status at all,
+so the moment CI becomes a *required* check, a docs-only PR would sit forever waiting for a run that
+never starts. Turning that on means replacing the skip with a filter job that reports success — the
+comment at the top of `ci.yml` says the same thing, next to the code.
+
 ## Working from a fork
 
 The owner and repo name are hardcoded in four places. Change all of them or the download page will
