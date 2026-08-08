@@ -61,7 +61,11 @@ finished, commit it and push** — no need to ask first.
 - Run the checks below before each commit, not just at the end. Don't commit a broken tree; if the
   work is half-done, finish that part or leave it uncommitted.
 - Message says what changed and why. End with `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`.
-- Opening or updating a PR stays an explicit request.
+- **If the branch has an open PR, re-read its title and description after each push and correct them
+  if the commit made them wrong** — a scope the title no longer covers, a description missing what
+  landed, a "for the reviewer" note that has been addressed. Leave them alone when they still hold;
+  don't churn the body for a typo fix.
+- *Opening* a PR stays an explicit request; so does merging one.
 
 ## Before finishing a change
 
