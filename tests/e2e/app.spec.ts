@@ -30,8 +30,15 @@ interface RendererApi {
   };
 }
 
-let app: ElectronApplication;
+let app: ElectronApplication | undefined;
 let window: Page;
+
+/**
+ * How long to wait for Electron to exit before stopping asking politely. Well
+ * under both the per-test timeout and Playwright's worker teardown budget, so a
+ * stuck process surfaces as a killed process rather than as a failed run.
+ */
+const CLOSE_TIMEOUT_MS = 15_000;
 let libraryPath: string;
 let userDataPath: string;
 
@@ -82,6 +89,53 @@ async function launch(): Promise<void> {
   await window.waitForLoadState('domcontentloaded');
 }
 
+/**
+ * Close the app, and never let a stuck one hang the worker.
+ *
+ * Windows can hold the Electron process — and the SQLite handle inside it — a
+ * moment longer than we do, and `close()` waits for the process to exit. On the
+ * last test of a run that wait happens during worker teardown, where exceeding
+ * the budget fails the entire suite as an error belonging to no test, even
+ * though every test passed. So the wait is bounded, and then the process is
+ * killed outright: this is cleanup, and cleanup must not be able to fail a run.
+ */
+async function closeApp(): Promise<void> {
+  const closing = app;
+  if (!closing) return;
+  app = undefined;
+
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      closing.close(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('Electron did not exit in time')), CLOSE_TIMEOUT_MS);
+      }),
+    ]);
+  } catch {
+    try {
+      closing.process().kill();
+    } catch {
+      // Already gone, which is the outcome we wanted anyway.
+    }
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Delete a temp folder, retrying briefly for the Windows case where the handle
+ * outlives the process. A folder we failed to remove is the OS's problem to
+ * mop up, not a reason to fail a green suite.
+ */
+function removeQuietly(target: string): void {
+  try {
+    rmSync(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  } catch {
+    // Left behind under the system temp directory; harmless.
+  }
+}
+
 test.beforeEach(async () => {
   const scratch = mkdtempSync(join(tmpdir(), 'mindex-e2e-'));
   libraryPath = join(scratch, 'library');
@@ -92,12 +146,8 @@ test.beforeEach(async () => {
 });
 
 test.afterEach(async () => {
-  await app?.close();
-  try {
-    rmSync(join(libraryPath, '..'), { recursive: true, force: true });
-  } catch {
-    // Windows sometimes holds the database handle a moment longer than we do.
-  }
+  await closeApp();
+  removeQuietly(join(libraryPath, '..'));
 });
 
 /**
@@ -158,7 +208,7 @@ test('edits are saved and survive a restart', async () => {
   // Wait for the write to reach the database rather than for the UI to flash.
   await expect.poll(async () => (await newestItem())?.notes).toBe('the good one');
 
-  await app.close();
+  await closeApp();
   await launch();
 
   await expect(window.locator('.item-list .row-name')).toHaveText('Acme Widget');
