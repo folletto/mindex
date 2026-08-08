@@ -266,6 +266,11 @@ jobs:
       - name: Attach everything to ${{ needs.version.outputs.tag }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # This job downloads artifacts and never checks the repo out, so there
+          # is no working tree for `gh` to read a remote from — without this it
+          # dies with "not a git repository" on every call, including the
+          # `release view` probe below, whose output is swallowed.
+          GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.version.outputs.tag }}
           VERSION: ${{ needs.version.outputs.version }}
           SHA: ${{ needs.version.outputs.sha }}
