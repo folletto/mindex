@@ -1,7 +1,8 @@
 # Mindex — working notes
 
 Offline Electron desktop app (React renderer + SQLite via `better-sqlite3`) over a user-chosen
-library folder. README.md holds the full rationale; this file is the short version for making changes.
+library folder. This file is the short version for making changes; `docs/architecture.md` holds the
+full rationale, `docs/setup.md` the manual configuration, README.md the product overview.
 
 ## Layout
 
@@ -17,6 +18,7 @@ src/preload/   explicit allow-list bridged to the renderer
 src/renderer/  React only — no fs, no path, no Electron (lint-enforced)
 src/shared/    types + pure logic used by both sides
 tests/         unit · integration · concurrency · e2e (see below)
+docs/          architecture.md (design rationale) · setup.md (manual config)
 ```
 
 ## Commands
@@ -61,3 +63,5 @@ with the sandbox disabled, or the failures look real but aren't.
 This file points at real paths, scripts, thresholds and rules. **If any of them change — scripts in
 `package.json`, the layout under `src/`, the lint boundaries, the coverage gate, the migration or
 locking rules — update this file in the same change.** A stale pointer here is worse than no pointer.
+The same goes for `docs/architecture.md` and `docs/setup.md`: a design change or a new required
+secret, environment variable or repository setting belongs in them as part of the change.
