@@ -1,6 +1,6 @@
 # Mindex
 
-A catalogue of your things, kept in a folder you own.
+Fully local, searchable, catalog of items.
 
 Mindex is an offline desktop app for macOS and Windows that keeps a list of items — tools, parts,
 equipment, whatever you need to find again — with notes, your own custom fields, and the manuals and
@@ -8,30 +8,26 @@ photos that go with them. There is no account, no server, and nothing leaves you
 
 **[Download](https://folletto.github.io/mindex/)** · [Releases](https://github.com/folletto/mindex/releases)
 
----
 
-## The data folder is the point
+## Everything in one folder
 
 You pick a folder on first launch, and everything lives inside it: a SQLite database for the
-metadata, and one real folder of real files per item. That shape is a promise, not an implementation
-detail — the folder is portable, it is inspectable without Mindex, and nothing is ever destroyed
-behind your back. Two machines can share one catalogue through Dropbox, iCloud or Syncthing without
-losing an edit.
+item metadata, and one folder containing all the files attached to each item. No special formats,
+everything is either the files you have as they are, unchanged, and a SQLite database accessible
+at any point with open source tools.
+
+Nothing is altered or removed without explicit user action, and deletion happens in a separate
+archive folder to minimize mistakes.
+
+The folder is portable. Easy to copy, or compress and move. It can also be put on a shared folder 
+like Dropbox, iCloud, and it will sync accordingly.
 
 How that works, and where it stops working, is in [docs/architecture.md](docs/architecture.md).
 
+
 ## Installing
 
-Builds are currently **unsigned**, which costs one extra step the first time.
-
-### macOS
-
-Right-click the app and choose **Open** — double-clicking will show a warning and refuse. You only
-have to do this once. If macOS still refuses:
-
-```sh
-xattr -d com.apple.quarantine /Applications/Mindex.app
-```
+Builds are currently **unsigned**, which requires one extra step the first time it runs.
 
 ### Windows
 
@@ -42,7 +38,16 @@ Signing is wired up but off — see [docs/setup.md](docs/setup.md#3-code-signing
 secrets that turn it on. Note that **macOS auto-update requires a signed app**, which is why Mindex
 currently points you at the download page rather than updating itself.
 
----
+### macOS
+
+Right-click the app and choose **Open** — double-clicking will show a warning and refuse. You only
+have to do this once. If macOS still refuses:
+
+```sh
+xattr -d com.apple.quarantine /Applications/Mindex.app
+```
+
+
 
 ## Development
 
