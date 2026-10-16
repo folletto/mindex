@@ -247,7 +247,7 @@ export function ItemDetail({ itemId, fields, dataVersion, readOnly, onTrashed, o
       }}
     >
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 p-6">
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1.5">
           <Input
             data-testid="item-title"
             aria-label="Name"
@@ -255,7 +255,7 @@ export function ItemDetail({ itemId, fields, dataVersion, readOnly, onTrashed, o
             disabled={readOnly}
             onChange={(event) => edit({ name: event.target.value })}
             onBlur={save}
-            className="-ml-1.5 h-auto border-transparent bg-transparent px-1.5 py-1 text-2xl font-semibold enabled:hover:border-border"
+            className="h-11 px-3 text-xl font-semibold"
           />
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-text-muted">
             <p data-testid="item-meta" className="flex flex-wrap gap-x-2">
