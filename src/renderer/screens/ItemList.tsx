@@ -19,11 +19,11 @@ interface ItemListProps {
   onQueryChange(query: string): void;
   onSortChange(sort: SortKey, direction: SortDirection): void;
   onSelect(id: string): void;
-  /** The search box, so the shell can focus it. React 19 passes ref as an ordinary prop, so no forwardRef is needed. */
+  /** The search box, focused by the shell. React 19 passes ref as a plain prop, so forwardRef is not needed. */
   ref?: Ref<HTMLInputElement>;
 }
 
-/** Names read A–Z or Z–A, so their label follows the direction. Dates are told apart by the arrow beside the select. */
+/** Names read A–Z or Z–A, so their label follows the direction. The arrow tells the dates apart. */
 function sortOptions(direction: SortDirection): SelectOption[] {
   const order = direction === 'asc' ? 'A–Z' : 'Z–A';
   return [
