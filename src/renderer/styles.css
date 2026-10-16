@@ -1,12 +1,4 @@
-/*
- * Cascade order. legacy.css is the old stylesheet, still imported until every screen is rebuilt on Tailwind. Its
- * global rules for button, input and select would beat any utility if they were unlayered, so they sit in the
- * legacy layer, below the utilities. Deleting the file deletes that layer with it.
- */
-@layer theme, base, legacy, components, utilities;
-
 @import 'tailwindcss';
-@import './legacy.css' layer(legacy);
 
 /*
  * Design tokens. Components use the semantic utilities these generate (bg-bg,
@@ -84,6 +76,16 @@
     background-color: var(--color-bg);
     color: var(--color-text);
     font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Inline code is a small sunken chip wherever it appears. A utility on a code element still overrides it. */
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.92em;
+    border-radius: 4px;
+    background-color: var(--color-bg-sunken);
+    padding: 1px 5px;
   }
 }
 

@@ -18,11 +18,10 @@
  * Not flagged: comments, prose that happens to contain a colour word, and tokens
  * (bg-bg, text-text-muted), which are the whole point.
  *
- * Allowed: the two token blocks in styles.css, and the legacy stylesheet on the
- * allow-list below.
+ * Allowed: the two token blocks in styles.css, and nothing else.
  */
 
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { extname, join, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
@@ -30,14 +29,6 @@ import { describe, expect, it } from 'vitest';
 import { STYLES_CSS, readStylesCss, themeColourTokens } from '../helpers/styles.js';
 
 const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
-
-/**
- * TEMPORARY. legacy.css is the old stylesheet, kept only until the screens are
- * rebuilt on Tailwind. Delete its entry here in the same change that deletes the
- * file. The last test below fails while the entry outlives the file, so the entry
- * cannot be forgotten.
- */
-const LEGACY_STYLESHEET_ALLOWLIST: ReadonlySet<string> = new Set(['src/renderer/legacy.css']);
 
 const SCANNED_EXTENSIONS = new Set(['.ts', '.tsx', '.css', '.html']);
 
@@ -484,25 +475,14 @@ describe('the renderer paints with colour tokens only', () => {
     expect(sources).toContain(STYLES_CSS);
   });
 
-  it('has no colour literal outside the token blocks and the legacy allow-list', () => {
-    const violations = rendererSources()
-      .filter((file) => !LEGACY_STYLESHEET_ALLOWLIST.has(file))
-      .flatMap((file) =>
-        findColourViolations(file, readFileSync(join(REPO_ROOT, file), 'utf8'), {
-          tokens: liveTokens,
-          allowTokenBlocks: file === STYLES_CSS,
-        }),
-      );
+  it('has no colour literal outside the two token blocks of styles.css', () => {
+    const violations = rendererSources().flatMap((file) =>
+      findColourViolations(file, readFileSync(join(REPO_ROOT, file), 'utf8'), {
+        tokens: liveTokens,
+        allowTokenBlocks: file === STYLES_CSS,
+      }),
+    );
     expect(violations).toEqual([]);
-  });
-
-  it('allow-lists only files that still exist', () => {
-    for (const file of LEGACY_STYLESHEET_ALLOWLIST) {
-      expect(
-        existsSync(join(REPO_ROOT, file)),
-        `${file} is gone: remove its entry from LEGACY_STYLESHEET_ALLOWLIST`,
-      ).toBe(true);
-    }
   });
 });
 

@@ -125,7 +125,7 @@ function ItemRowButton({ item, current, onSelect }: ItemRowButtonProps) {
         data-testid="item-row"
         aria-current={current ? 'true' : undefined}
         onClick={() => onSelect(item.id)}
-        className="group flex w-full min-w-0 flex-col gap-0.5 rounded-md border border-transparent bg-transparent px-2.5 py-2 text-left hover:bg-bg-raised focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus aria-[current=true]:bg-accent aria-[current=true]:text-accent-text aria-[current=true]:hover:bg-accent"
+        className="group flex w-full min-w-0 cursor-pointer flex-col gap-0.5 rounded-md border border-transparent bg-transparent px-2.5 py-2 text-left hover:bg-bg-raised focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus aria-[current=true]:bg-accent aria-[current=true]:text-accent-text aria-[current=true]:hover:bg-accent"
       >
         <span className="flex min-w-0 items-baseline gap-2">
           <span data-testid="item-row-name" className="min-w-0 flex-1 truncate font-medium">

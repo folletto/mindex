@@ -47,8 +47,8 @@ npm run dist         # installers into release/
   `src/preload/index.ts`. ESLint enforces this; don't work around it.
 - **Renderer paints with colour tokens only.** Components use the utilities generated from the
   `@theme` block in `src/renderer/styles.css` (`bg-bg`, `text-text-muted`), never a literal colour or
-  their own `dark:` colour variant. `tests/unit/no-hardcoded-colors.test.ts` enforces it. `legacy.css`
-  is the one temporary exception; its allow-list entry goes in the change that deletes the file.
+  their own `dark:` colour variant. `tests/unit/no-hardcoded-colors.test.ts` enforces it, with the two
+  token blocks in `styles.css` as its only exception.
 - **The app follows the OS colour scheme.** Nothing in `src/main` touches `nativeTheme` or sets
   `themeSource`; `tests/unit/theme-follows-os.test.ts` enforces it.
 - **The e2e suite selects by role, label, text or `data-testid` only.** Its "UI contract" comment, at

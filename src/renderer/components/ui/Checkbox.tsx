@@ -28,7 +28,7 @@ export function Checkbox({ className, checked, defaultChecked, onCheckedChange, 
       defaultChecked={defaultChecked}
       onCheckedChange={(state) => onCheckedChange?.(state === true)}
       className={cn(
-        'inline-flex size-4.5 shrink-0 items-center justify-center rounded-sm border border-border bg-bg-raised text-accent-text',
+        'inline-flex size-4.5 shrink-0 cursor-pointer items-center justify-center rounded-sm border border-border bg-bg-raised text-accent-text disabled:cursor-default',
         'data-[state=checked]:border-accent data-[state=checked]:bg-accent',
         controlBase,
         className,

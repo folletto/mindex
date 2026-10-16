@@ -27,7 +27,7 @@ export function RadioItem({ label, description, id, className, ref, ...props }: 
         id={itemId}
         aria-describedby={description ? descriptionId : undefined}
         className={cn(
-          'mt-0.5 flex size-4.5 shrink-0 items-center justify-center rounded-full border border-border bg-bg-raised',
+          'mt-0.5 flex size-4.5 shrink-0 cursor-pointer items-center justify-center rounded-full border border-border bg-bg-raised disabled:cursor-default',
           'data-[state=checked]:border-accent',
           controlBase,
           className,
