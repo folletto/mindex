@@ -30,6 +30,27 @@ interface RendererApi {
   };
 }
 
+/** How the page is painted at a given moment, read from the live renderer. */
+interface Paint {
+  background: string;
+  text: string;
+  bgToken: string;
+  fontFamily: string;
+  prefersDark: boolean;
+}
+
+/** The slice of the renderer's globals that paintOf() reads. Declared locally, as RendererApi is. */
+interface RendererDom {
+  document: { body: unknown; documentElement: unknown };
+  getComputedStyle(element: unknown): {
+    backgroundColor: string;
+    color: string;
+    fontFamily: string;
+    getPropertyValue(name: string): string;
+  };
+  matchMedia(query: string): { matches: boolean };
+}
+
 let app: ElectronApplication | undefined;
 let window: Page;
 
@@ -182,6 +203,43 @@ test('@smoke opens a window and initialises the library folder', async () => {
   expect(existsSync(join(libraryPath, 'data'))).toBe(true);
   // Nothing has been deleted, so there is no trash folder yet.
   expect(existsSync(join(libraryPath, 'deleted'))).toBe(false);
+});
+
+/** Read the body's colours and font, and the background token, from the live page. */
+async function paintOf(): Promise<Paint> {
+  return window.evaluate(() => {
+    const dom = globalThis as unknown as RendererDom;
+    const body = dom.getComputedStyle(dom.document.body);
+    return {
+      background: body.backgroundColor,
+      text: body.color,
+      bgToken: dom.getComputedStyle(dom.document.documentElement).getPropertyValue('--color-bg').trim(),
+      fontFamily: body.fontFamily,
+      prefersDark: dom.matchMedia('(prefers-color-scheme: dark)').matches,
+    };
+  });
+}
+
+test('@smoke follows the OS colour scheme and paints with the system font', async () => {
+  // beforeEach has already opened the library. Wait for the shell before measuring.
+  await expect(window.getByRole('button', { name: 'New item' })).toBeVisible();
+
+  await window.emulateMedia({ colorScheme: 'light' });
+  const light = await paintOf();
+  await window.emulateMedia({ colorScheme: 'dark' });
+  const dark = await paintOf();
+
+  // The emulation took effect: the media query flipped, not just the colours.
+  expect(light.prefersDark).toBe(false);
+  expect(dark.prefersDark).toBe(true);
+
+  expect(light.bgToken).not.toBe('');
+  expect(dark.background).not.toBe(light.background);
+  expect(dark.text).not.toBe(light.text);
+  expect(dark.bgToken).not.toBe(light.bgToken);
+
+  expect(light.fontFamily).toContain('system-ui');
+  expect(dark.fontFamily).toContain('system-ui');
 });
 
 test('@smoke creates an item and shows it in the list', async () => {
