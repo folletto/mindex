@@ -51,8 +51,8 @@ corrupting it or losing an edit. This is the part of the design that took the mo
   this one opens read-only and says whose machine it is — with a way through, because the lock is
   advice, not a wall.
 
-**The honest limitation:** two machines editing the *same item* in the *same second* on a
-*cloud-synced* folder can still make the sync client produce a conflicted copy of the database file.
+**The honest limitation:** two machines editing the _same item_ in the _same second_ on a
+_cloud-synced_ folder can still make the sync client produce a conflicted copy of the database file.
 That is a property of file-level sync, not of the app. Mindex detects those copies and tells you.
 Real multi-writer over the internet would need a server, which this app deliberately does not have.
 
@@ -118,13 +118,13 @@ headers would add nothing but a way for the build to fail. The one thing that do
 
 Testing is a deliverable here, not a milestone. Around 480 tests, in layers:
 
-| Layer | What it covers |
-|---|---|
-| Unit + property (`fast-check`) | slug generation, filename sanitisation, path containment, retry backoff |
-| Integration | real SQLite on a real temp folder — repositories, migrations, constraints, compensating writes |
-| Concurrency | **real child processes** writing to one shared library, on both journal modes |
-| IPC contract | every handler against a real temp library, with Electron mocked and nothing else |
-| End-to-end | Playwright driving the built Electron app |
+| Layer                          | What it covers                                                                                 |
+| ------------------------------ | ---------------------------------------------------------------------------------------------- |
+| Unit + property (`fast-check`) | slug generation, filename sanitisation, path containment, retry backoff                        |
+| Integration                    | real SQLite on a real temp folder — repositories, migrations, constraints, compensating writes |
+| Concurrency                    | **real child processes** writing to one shared library, on both journal modes                  |
+| IPC contract                   | every handler against a real temp library, with Electron mocked and nothing else               |
+| End-to-end                     | Playwright driving the built Electron app                                                      |
 
 Two areas get the heaviest coverage because they are the ones that would hurt most if they broke
 quietly:
