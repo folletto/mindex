@@ -1,13 +1,15 @@
 /**
- * One input per custom field type.
+ * The control for one custom field, chosen by its type. The Field around it (in ItemDetail) supplies the label, and
+ * each control takes its id and description from that Field, so the label names the control.
  *
- * Values leave here as the plain JS value the field's type implies; the main
- * process is the one that decides whether it is acceptable, so this is about
- * offering the right control, not about validation.
+ * Values leave here as the plain JS value the field's type implies; the main process is the one that decides
+ * whether it is acceptable, so this is about offering the right control, not about validation.
  */
 
+import { ExternalLink } from 'lucide-react';
 import type { FieldDef, FieldValue } from '@shared/types';
 import { api } from '../state/api.js';
+import { Button, Checkbox, Input, Select, Textarea } from './ui/index.js';
 
 interface Props {
   field: FieldDef;
@@ -17,17 +19,19 @@ interface Props {
   onCommit(): void;
 }
 
-export function FieldInput({ field, value, disabled, onChange, onCommit }: Props) {
-  const id = `field-${field.key}`;
+/** What a text-like control shows for a stored value: nothing for null, otherwise the value as text. */
+function textOf(value: FieldValue): string {
+  return value === null ? '' : String(value);
+}
 
+export function FieldInput({ field, value, disabled, onChange, onCommit }: Props) {
   switch (field.type) {
     case 'longtext':
       return (
-        <textarea
-          id={id}
+        <Textarea
           rows={4}
           disabled={disabled}
-          value={value === null ? '' : String(value)}
+          value={textOf(value)}
           onChange={(event) => onChange(event.target.value)}
           onBlur={onCommit}
         />
@@ -35,12 +39,11 @@ export function FieldInput({ field, value, disabled, onChange, onCommit }: Props
 
     case 'number':
       return (
-        <input
-          id={id}
+        <Input
           type="number"
           step="any"
           disabled={disabled}
-          value={value === null ? '' : String(value)}
+          value={textOf(value)}
           onChange={(event) => onChange(event.target.value === '' ? null : Number(event.target.value))}
           onBlur={onCommit}
         />
@@ -48,11 +51,10 @@ export function FieldInput({ field, value, disabled, onChange, onCommit }: Props
 
     case 'date':
       return (
-        <input
-          id={id}
+        <Input
           type="date"
           disabled={disabled}
-          value={value === null ? '' : String(value)}
+          value={textOf(value)}
           onChange={(event) => onChange(event.target.value === '' ? null : event.target.value)}
           onBlur={onCommit}
         />
@@ -60,13 +62,11 @@ export function FieldInput({ field, value, disabled, onChange, onCommit }: Props
 
     case 'boolean':
       return (
-        <input
-          id={id}
-          type="checkbox"
+        <Checkbox
           disabled={disabled}
           checked={value === true}
-          onChange={(event) => {
-            onChange(event.target.checked);
+          onCheckedChange={(checked) => {
+            onChange(checked);
             // A checkbox has no meaningful blur, so commit on the change itself.
             queueMicrotask(onCommit);
           }}
@@ -75,56 +75,51 @@ export function FieldInput({ field, value, disabled, onChange, onCommit }: Props
 
     case 'url':
       return (
-        <div className="url-input">
-          <input
-            id={id}
+        <div className="flex items-center gap-2">
+          <Input
             type="url"
             inputMode="url"
             disabled={disabled}
-            value={value === null ? '' : String(value)}
+            value={textOf(value)}
             onChange={(event) => onChange(event.target.value === '' ? null : event.target.value)}
             onBlur={onCommit}
           />
           {typeof value === 'string' && value !== '' && (
-            <button
-              type="button"
-              className="ghost small"
+            <Button
+              size="sm"
+              variant="ghost"
+              icon={ExternalLink}
+              aria-label={`Open ${field.label}`}
               title="Open in your browser"
               onClick={() => void api.app.openExternal(value)}
             >
               Open
-            </button>
+            </Button>
           )}
         </div>
       );
 
     case 'select':
       return (
-        <select
-          id={id}
+        <Select
           disabled={disabled}
-          value={value === null ? '' : String(value)}
-          onChange={(event) => {
-            onChange(event.target.value === '' ? null : event.target.value);
+          value={value === null ? null : String(value)}
+          options={(field.options ?? []).map((option) => ({ value: option, label: option }))}
+          emptyLabel="—"
+          onValueChange={(next) => {
+            onChange(next);
+            // Choosing from a list is the whole edit, so commit on the change itself.
             queueMicrotask(onCommit);
           }}
-        >
-          <option value="">—</option>
-          {(field.options ?? []).map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+        />
       );
 
     default:
       return (
-        <input
-          id={id}
+        <Input
           type="text"
           disabled={disabled}
-          value={value === null ? '' : String(value)}
+          value={textOf(value)}
           onChange={(event) => onChange(event.target.value)}
           onBlur={onCommit}
         />

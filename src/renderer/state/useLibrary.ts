@@ -34,10 +34,12 @@ export function useDataVersion(): number {
   return version;
 }
 
-export function useFields(dataVersion: number): FieldDef[] {
+/** The library's field definitions. Nothing is listed until a library is open, so the call waits for `ready`. */
+export function useFields(dataVersion: number, ready: boolean): FieldDef[] {
   const [fields, setFields] = useState<FieldDef[]>([]);
 
   useEffect(() => {
+    if (!ready) return;
     let cancelled = false;
     void api.fields.list().then((next) => {
       if (!cancelled) setFields(next);
@@ -45,7 +47,7 @@ export function useFields(dataVersion: number): FieldDef[] {
     return () => {
       cancelled = true;
     };
-  }, [dataVersion]);
+  }, [dataVersion, ready]);
 
   return fields;
 }

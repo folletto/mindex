@@ -22,6 +22,9 @@ src/main/      Electron main: DB handle, filesystem, dialogs
   lock.ts      advisory heartbeat lock for synced folders
 src/preload/   explicit allow-list bridged to the renderer
 src/renderer/  React only — no fs, no path, no Electron (lint-enforced)
+  components/ui/  shared primitives on Radix and Lucide, imported from its index.ts
+  lib/cn.ts       class names merged for the primitives (clsx + tailwind-merge)
+  styles.css      Tailwind v4 entry: colour and font tokens in @theme, dark values under prefers-color-scheme
 src/shared/    types + pure logic used by both sides
 tests/         unit · integration · concurrency · e2e (see below)
 docs/          architecture.md (design rationale) · setup.md (manual config)
@@ -44,6 +47,14 @@ npm run dist         # installers into release/
 - **Renderer stays sandboxed.** No `fs`/`path`/`child_process`/`electron` imports, no `require`,
   no importing `src/main/**`. New capability = new channel in `src/main/ipc.ts` + a line in
   `src/preload/index.ts`. ESLint enforces this; don't work around it.
+- **Renderer paints with colour tokens only.** Components use the utilities generated from the
+  `@theme` block in `src/renderer/styles.css` (`bg-bg`, `text-text-muted`), never a literal colour or
+  their own `dark:` colour variant. `tests/unit/no-hardcoded-colors.test.ts` enforces it, with the two
+  token blocks in `styles.css` as its only exception.
+- **The app follows the OS colour scheme.** Nothing in `src/main` touches `nativeTheme` or sets
+  `themeSource`; `tests/unit/theme-follows-os.test.ts` enforces it.
+- **The e2e suite selects by role, label, text or `data-testid` only.** Its "UI contract" comment, at
+  the top of `tests/e2e/app.spec.ts`, lists what a rebuilt renderer must provide. Keep the two in step.
 - **Only IDs cross IPC.** Main resolves IDs to paths from the DB and checks containment inside the
   library folder (`src/main/paths.ts`) before touching anything.
 - **Transactions never span I/O.** `BEGIN IMMEDIATE` writes contain no filesystem work (they may be
@@ -71,7 +82,7 @@ finished, commit it and push** — no need to ask first.
   if the commit made them wrong** — a scope the title no longer covers, a description missing what
   landed, a "for the reviewer" note that has been addressed. Leave them alone when they still hold;
   don't churn the body for a typo fix.
-- *Opening* a PR stays an explicit request; so does merging one.
+- _Opening_ a PR stays an explicit request; so does merging one.
 
 ## Before finishing a change
 

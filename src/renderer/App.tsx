@@ -1,12 +1,17 @@
 /**
- * The shell: which screen is showing, what is selected, and the toast that
- * makes a deletion undoable.
+ * The shell: the navigation rail, the top bar that names the section, which screen is showing, what is selected, and
+ * the read-only banner. A deletion offers to undo itself through the toast from useToast, so the shell keeps no toast
+ * state of its own.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
+import { Package, Plus, Settings as SettingsIcon, SlidersHorizontal, Trash2, type LucideIcon } from 'lucide-react';
 import type { Item, ItemRow, SortDirection, SortKey } from '@shared/types';
 import { api, onMenuCommand } from './state/api.js';
 import { useDataVersion, useDebounced, useFields, useLibraryState } from './state/useLibrary.js';
+import { TopBar } from './components/TopBar.js';
+import { Banner, Button, EmptyState, Pane, useToast } from './components/ui/index.js';
 import { Onboarding } from './screens/Onboarding.js';
 import { ItemList } from './screens/ItemList.js';
 import { ItemDetail } from './screens/ItemDetail.js';
@@ -16,15 +21,22 @@ import { Settings } from './screens/Settings.js';
 
 type View = 'items' | 'trash' | 'fields' | 'settings';
 
-interface Toast {
-  message: string;
-  undo?: () => void;
-}
+/** What each section is called. The top bar shows it, and the rail labels its buttons with it. */
+const TITLES: Record<View, string> = { items: 'Items', trash: 'Trash', fields: 'Fields', settings: 'Settings' };
+
+/** The rail's destinations above Settings. Settings sits apart at the bottom. */
+const RAIL_VIEWS: { view: Exclude<View, 'settings'>; icon: LucideIcon }[] = [
+  { view: 'items', icon: Package },
+  { view: 'trash', icon: Trash2 },
+  { view: 'fields', icon: SlidersHorizontal },
+];
 
 export function App() {
   const { state } = useLibraryState();
   const dataVersion = useDataVersion();
-  const fields = useFields(dataVersion);
+  const ready = state?.status === 'ready';
+  const fields = useFields(dataVersion, ready);
+  const toast = useToast();
 
   const [view, setView] = useState<View>('items');
   const [items, setItems] = useState<ItemRow[]>([]);
@@ -33,12 +45,10 @@ export function App() {
   const [sort, setSort] = useState<SortKey>('updatedAt');
   const [direction, setDirection] = useState<SortDirection>('desc');
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<Toast | null>(null);
   const [localVersion, setLocalVersion] = useState(0);
 
   const searchRef = useRef<HTMLInputElement>(null);
   const debouncedQuery = useDebounced(query, 200);
-  const ready = state?.status === 'ready';
   const readOnly = Boolean(state?.readOnly);
 
   const bump = useCallback(() => setLocalVersion((current) => current + 1), []);
@@ -91,7 +101,8 @@ export function App() {
     const unsubscribes = [
       onMenuCommand('menu:new-item', () => void createItem()),
       onMenuCommand('menu:focus-search', () => {
-        setView('items');
+        // The search box exists only in the Items view. Switching synchronously means it is on screen to be focused.
+        flushSync(() => setView('items'));
         searchRef.current?.focus();
         searchRef.current?.select();
       }),
@@ -106,126 +117,160 @@ export function App() {
     return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
   }, [ready, createItem]);
 
-  useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => setToast(null), 8000);
-    return () => clearTimeout(timer);
-  }, [toast]);
-
   const onTrashed = (item: Item) => {
     // The item is gone from the list, so the selection goes with it and the
     // fallback picks whatever is now at the top.
     setSelectedId(null);
     bump();
-    setToast({
+    toast.show({
       message: `“${item.name}” moved to the trash.`,
-      undo: () => {
+      actionLabel: 'Undo',
+      onAction: () => {
         void api.items.restore({ id: item.id }).then(async () => {
           // Same ordering as createItem: the row has to be back in the list
           // before it can be the selection.
           await loadItems();
           setSelectedId(item.id);
-          setToast(null);
         });
       },
     });
   };
 
-  if (!state) return <main className="loading">Opening…</main>;
+  if (!state) {
+    return <main className="flex h-screen items-center justify-center bg-bg text-text-muted">Opening…</main>;
+  }
   if (state.status !== 'ready') return <Onboarding state={state} />;
 
   return (
-    <div className="app">
-      <nav className="sidebar-nav">
-        <span className="brand">Mindex</span>
-        <button type="button" className={view === 'items' ? 'active' : ''} onClick={() => setView('items')}>
-          Items
-        </button>
-        <button type="button" className={view === 'trash' ? 'active' : ''} onClick={() => setView('trash')}>
-          Trash
-        </button>
-        <button type="button" className={view === 'fields' ? 'active' : ''} onClick={() => setView('fields')}>
-          Fields
-        </button>
-        <span className="spacer" />
-        <button type="button" className={view === 'settings' ? 'active' : ''} onClick={() => setView('settings')}>
-          Settings
-        </button>
+    <div className="flex h-screen overflow-hidden bg-bg text-text">
+      <nav aria-label="Main" className="flex w-40 shrink-0 flex-col border-r border-border bg-bg-sunken">
+        {/* macOS hides the title bar: the traffic lights sit on this strip, which also drags the window. */}
+        <div className="h-10 shrink-0 app-drag" />
+        <ul className="flex flex-col gap-0.5 px-2 pt-3">
+          {RAIL_VIEWS.map((entry) => (
+            <li key={entry.view}>
+              <NavButton
+                icon={entry.icon}
+                label={TITLES[entry.view]}
+                current={view === entry.view}
+                onSelect={() => setView(entry.view)}
+              />
+            </li>
+          ))}
+        </ul>
+        <ul className="mt-auto px-2 pb-2">
+          <li>
+            <NavButton
+              icon={SettingsIcon}
+              label={TITLES.settings}
+              current={view === 'settings'}
+              onSelect={() => setView('settings')}
+            />
+          </li>
+        </ul>
       </nav>
 
-      {readOnly && (
-        <div className="banner" role="status">
-          {state.readOnlyReason} —{' '}
-          <button type="button" className="link" onClick={() => setView('settings')}>
-            details
-          </button>
-        </div>
-      )}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <TopBar title={TITLES[view]} />
 
-      {view === 'items' && (
-        <div className="split">
-          <aside className="sidebar">
-            <div className="sidebar-actions">
-              <button type="button" className="primary" disabled={readOnly} onClick={() => void createItem()}>
-                New item
-              </button>
+        {readOnly ? (
+          <Banner
+            tone="warning"
+            className="rounded-none border-0 border-b"
+            action={
+              <Button variant="link" size="sm" className="py-0" onClick={() => setView('settings')}>
+                details
+              </Button>
+            }
+          >
+            {state.readOnlyReason ?? 'This library is read-only.'}
+          </Banner>
+        ) : null}
+
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col">
+          {view === 'items' && (
+            <div className="flex min-h-0 min-w-0 flex-1">
+              <aside aria-label="Item list" className="flex w-80 shrink-0 flex-col border-r border-border bg-bg">
+                <div className="border-b border-border p-3">
+                  <Button
+                    variant="primary"
+                    icon={Plus}
+                    className="w-full"
+                    disabled={readOnly}
+                    onClick={() => void createItem()}
+                  >
+                    New item
+                  </Button>
+                </div>
+                <ItemList
+                  ref={searchRef}
+                  items={items}
+                  selectedId={selected}
+                  query={query}
+                  sort={sort}
+                  direction={direction}
+                  loading={loading}
+                  onQueryChange={(next) => {
+                    setQuery(next);
+                    // A selection the search has filtered away is not a selection.
+                    setSelectedId(null);
+                  }}
+                  onSortChange={(nextSort, nextDirection) => {
+                    setSort(nextSort);
+                    setDirection(nextDirection);
+                  }}
+                  onSelect={setSelectedId}
+                />
+              </aside>
+
+              <Pane>
+                {selected ? (
+                  <ItemDetail
+                    key={selected}
+                    itemId={selected}
+                    fields={fields}
+                    dataVersion={dataVersion}
+                    readOnly={readOnly}
+                    onTrashed={onTrashed}
+                    onChanged={bump}
+                  />
+                ) : (
+                  <EmptyState icon={Package} title="Select an item, or make a new one." />
+                )}
+              </Pane>
             </div>
-            <ItemList
-              ref={searchRef}
-              items={items}
-              selectedId={selected}
-              query={query}
-              sort={sort}
-              direction={direction}
-              loading={loading}
-              onQueryChange={(next) => {
-                setQuery(next);
-                // A selection the search has filtered away is not a selection.
-                setSelectedId(null);
-              }}
-              onSortChange={(nextSort, nextDirection) => {
-                setSort(nextSort);
-                setDirection(nextDirection);
-              }}
-              onSelect={setSelectedId}
-            />
-          </aside>
-
-          {selected ? (
-            <ItemDetail
-              key={selected}
-              itemId={selected}
-              fields={fields}
-              dataVersion={dataVersion}
-              readOnly={readOnly}
-              onTrashed={onTrashed}
-              onChanged={bump}
-            />
-          ) : (
-            <section className="detail empty">
-              <p className="empty-state">Select an item, or make a new one.</p>
-            </section>
           )}
-        </div>
-      )}
 
-      {view === 'trash' && <Trash dataVersion={dataVersion} readOnly={readOnly} onRestored={bump} />}
-      {view === 'fields' && <Fields fields={fields} readOnly={readOnly} onChanged={bump} />}
-      {view === 'settings' && <Settings state={state} />}
-
-      {toast && (
-        <div className="toast" role="status">
-          <span>{toast.message}</span>
-          {toast.undo && (
-            <button type="button" className="link" onClick={toast.undo}>
-              Undo
-            </button>
-          )}
-          <button type="button" className="ghost small" onClick={() => setToast(null)}>
-            Dismiss
-          </button>
-        </div>
-      )}
+          {view === 'trash' && <Trash dataVersion={dataVersion} readOnly={readOnly} onRestored={bump} />}
+          {view === 'fields' && <Fields fields={fields} readOnly={readOnly} onChanged={bump} />}
+          {view === 'settings' && <Settings state={state} />}
+        </main>
+      </div>
     </div>
+  );
+}
+
+interface NavButtonProps {
+  icon: LucideIcon;
+  label: string;
+  current: boolean;
+  onSelect(): void;
+}
+
+/**
+ * One destination in the rail. The open one carries aria-current, and the styling keys off that same attribute, so
+ * what is announced and what is shown cannot drift apart.
+ */
+function NavButton({ icon, label, current, onSelect }: NavButtonProps) {
+  return (
+    <Button
+      variant="ghost"
+      icon={icon}
+      aria-current={current ? 'page' : undefined}
+      onClick={onSelect}
+      className="w-full justify-start px-2.5 hover:bg-bg-raised aria-[current=page]:border-border aria-[current=page]:bg-bg-raised aria-[current=page]:font-semibold"
+    >
+      {label}
+    </Button>
   );
 }
