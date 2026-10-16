@@ -29,7 +29,8 @@ const RAIL_VIEWS: { view: Exclude<View, 'settings'>; label: string; icon: Lucide
 export function App() {
   const { state } = useLibraryState();
   const dataVersion = useDataVersion();
-  const fields = useFields(dataVersion);
+  const ready = state?.status === 'ready';
+  const fields = useFields(dataVersion, ready);
   const toast = useToast();
 
   const [view, setView] = useState<View>('items');
@@ -43,7 +44,6 @@ export function App() {
 
   const searchRef = useRef<HTMLInputElement>(null);
   const debouncedQuery = useDebounced(query, 200);
-  const ready = state?.status === 'ready';
   const readOnly = Boolean(state?.readOnly);
 
   const bump = useCallback(() => setLocalVersion((current) => current + 1), []);
