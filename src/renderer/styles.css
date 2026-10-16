@@ -20,11 +20,13 @@
   --color-bg-sunken: #ececee;
   --color-border: #d9d9dd;
   --color-text: #16161a;
-  --color-text-muted: #6b6b73;
-  --color-accent: #2f6df6;
+  /* Text passes 4.5:1 on every surface it sits on, sunken and warning included. */
+  --color-text-muted: #65656d;
+  /* Accent is link text too: 4.5:1 on bg, bg-raised, bg-sunken and warning-bg; accent-text on the fill. */
+  --color-accent: #1d5fe0;
   --color-accent-text: #ffffff;
   --color-danger: #c0392b;
-  --color-ok: #1f8a4c;
+  --color-ok: #17703d;
   --color-warning-bg: #fdf3d8;
   --color-warning-border: #e2c96a;
   --color-shadow: rgb(0 0 0 / 18%);
@@ -52,7 +54,8 @@
     --color-border: #38383e;
     --color-text: #ececef;
     --color-text-muted: #9a9aa4;
-    --color-accent: #5a8dff;
+    /* Lighter than the light accent, so it still passes 4.5:1 as link text on the dark warning-bg. */
+    --color-accent: #74a0ff;
     --color-accent-text: #0d1220;
     --color-danger: #ef6a5c;
     --color-ok: #4cc27e;
