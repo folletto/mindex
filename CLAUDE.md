@@ -50,6 +50,8 @@ npm run dist         # installers into release/
   is the one temporary exception; its allow-list entry goes in the change that deletes the file.
 - **The app follows the OS colour scheme.** Nothing in `src/main` touches `nativeTheme` or sets
   `themeSource`; `tests/unit/theme-follows-os.test.ts` enforces it.
+- **The e2e suite selects by role, label, text or `data-testid` only.** Its "UI contract" comment, at
+  the top of `tests/e2e/app.spec.ts`, lists what a rebuilt renderer must provide. Keep the two in step.
 - **Only IDs cross IPC.** Main resolves IDs to paths from the DB and checks containment inside the
   library folder (`src/main/paths.ts`) before touching anything.
 - **Transactions never span I/O.** `BEGIN IMMEDIATE` writes contain no filesystem work (they may be

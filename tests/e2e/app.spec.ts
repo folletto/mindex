@@ -12,6 +12,62 @@
  * chosen folder takes, minus the dialog.
  */
 
+/**
+ * UI contract
+ * -----------
+ * This suite is the behaviour the rebuilt renderer has to keep. It selects only
+ * by role, label, visible text or data-testid, never by CSS class or markup, so
+ * the screens can be redrawn from scratch and this file still describes them. If a
+ * test fails after a rebuild, the behaviour changed; the markup did not matter.
+ *
+ * Everything named here must exist in the rebuilt UI, and mean what it says.
+ *
+ * Roles (getByRole):
+ *   button "New item"                       creates an item and opens it (sidebar)
+ *   button "Items", "Fields", "Trash",      top-level navigation
+ *          "Settings"
+ *   button "Move to trash"                  on the open item; trashes it
+ *   button "Restore"                        on a trash row; brings the item back
+ *   button "Add" (exact)                    on Fields; adds the field named in "New field name"
+ *   button "rename folder to match"         on the open item; shown only when its folder name is stale
+ *   button "Check now"                      on Settings; runs the verify report
+ *
+ * Labels (getByLabel):
+ *   "Search items"                          the item list's search box
+ *   "New field name"                        the Fields screen's name input
+ *   "Manufacturer" (exact)                  input on the open item
+ *   "Notes" (exact)                         textarea on the open item
+ *   "Serial" (exact)                        a custom field's input on the open item, labelled with the field's name
+ *
+ * Text (getByText):
+ *   "Nothing here has been deleted"         the trash pane explains that nothing was deleted
+ *
+ * Test ids (getByTestId):
+ *   brand           the "Mindex" wordmark in the navigation
+ *   toast           the message after a trash, which says "moved to the trash"
+ *   item-row        one button per item in the list
+ *   item-row-name   the name shown on an item row
+ *   list-empty      the list's empty message ("Nothing matches …" when a search finds nothing)
+ *   item-title      the open item's name, an input that starts as "New item"
+ *   item-meta       the open item's "Updated …" line
+ *   item-folder     the open item's folder, e.g. "data/bosch-drill"
+ *   attachment-name the file name of an attachment on the open item
+ *   trash-row       one row per trashed item
+ *   trash-row-name  the name shown on a trash row
+ *   pane-title      the heading of the Trash, Fields and Settings panes
+ *   field-key       the key shown beside a field on Fields, e.g. "serial"
+ *   verify-ok       the "Everything matches." line of a clean verify report
+ *
+ * Beyond the UI:
+ *   - window.api has exactly the keys app, attachments, fields, items and library;
+ *     the suite calls items.list and attachments.add directly.
+ *   - MINDEX_LIBRARY opens the given folder without the native dialog.
+ *   - The library folder holds catalogue.db, .catalogue-library and data/, and deleted/
+ *     once something has been trashed.
+ *   - An item's folder is named from its name at creation (data/new-item) and only moves when asked.
+ *   - The page follows prefers-color-scheme, and its body font includes system-ui.
+ */
+
 import { test, expect, _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -188,14 +244,14 @@ async function newestItem(): Promise<Record<string, unknown> | null> {
 async function createItem(name: string): Promise<void> {
   await window.getByRole('button', { name: 'New item' }).click();
   // Wait for the new item's form to be the one on screen before typing into it.
-  await expect(window.locator('.title-input')).toHaveValue('New item');
-  await window.locator('.title-input').fill(name);
-  await window.locator('.title-input').blur();
-  await expect(window.locator('.item-list .row-name').first()).toHaveText(name);
+  await expect(window.getByTestId('item-title')).toHaveValue('New item');
+  await window.getByTestId('item-title').fill(name);
+  await window.getByTestId('item-title').blur();
+  await expect(window.getByTestId('item-row-name').first()).toHaveText(name);
 }
 
 test('@smoke opens a window and initialises the library folder', async () => {
-  await expect(window.locator('.sidebar-nav .brand')).toHaveText('Mindex');
+  await expect(window.getByTestId('brand')).toHaveText('Mindex');
 
   // The whole data-folder contract, on disk.
   expect(existsSync(join(libraryPath, 'catalogue.db'))).toBe(true);
@@ -245,23 +301,25 @@ test('@smoke follows the OS colour scheme and paints with the system font', asyn
 test('@smoke creates an item and shows it in the list', async () => {
   await window.getByRole('button', { name: 'New item' }).click();
 
-  const title = window.locator('.title-input');
+  const title = window.getByTestId('item-title');
   await expect(title).toHaveValue('New item');
 
   await title.fill('Bosch GSB 13 RE');
   await title.blur();
 
-  await expect(window.locator('.detail-meta')).toContainText('Updated');
-  await expect(window.locator('.item-list .row-name')).toHaveText('Bosch GSB 13 RE');
+  await expect(window.getByTestId('item-meta')).toContainText('Updated');
+  await expect(window.getByTestId('item-row-name')).toHaveText('Bosch GSB 13 RE');
 });
 
 test('edits are saved and survive a restart', async () => {
   await createItem('Acme Widget');
 
-  await window.locator('#manufacturer').fill('Acme');
-  await window.locator('#manufacturer').blur();
-  await window.locator('#notes').fill('the good one');
-  await window.locator('#notes').blur();
+  const manufacturer = window.getByLabel('Manufacturer', { exact: true });
+  const notes = window.getByLabel('Notes', { exact: true });
+  await manufacturer.fill('Acme');
+  await manufacturer.blur();
+  await notes.fill('the good one');
+  await notes.blur();
 
   // Wait for the write to reach the database rather than for the UI to flash.
   await expect.poll(async () => (await newestItem())?.notes).toBe('the good one');
@@ -269,10 +327,10 @@ test('edits are saved and survive a restart', async () => {
   await closeApp();
   await launch();
 
-  await expect(window.locator('.item-list .row-name')).toHaveText('Acme Widget');
-  await window.locator('.item-list button.row').click();
-  await expect(window.locator('#manufacturer')).toHaveValue('Acme');
-  await expect(window.locator('#notes')).toHaveValue('the good one');
+  await expect(window.getByTestId('item-row-name')).toHaveText('Acme Widget');
+  await window.getByTestId('item-row').click();
+  await expect(window.getByLabel('Manufacturer', { exact: true })).toHaveValue('Acme');
+  await expect(window.getByLabel('Notes', { exact: true })).toHaveValue('the good one');
 });
 
 test('search filters the list', async () => {
@@ -280,33 +338,33 @@ test('search filters the list', async () => {
     await createItem(name);
   }
 
-  await expect(window.locator('.item-list button.row')).toHaveCount(3);
+  await expect(window.getByTestId('item-row')).toHaveCount(3);
 
   await window.getByLabel('Search items').fill('makita');
-  await expect(window.locator('.item-list button.row')).toHaveCount(1);
-  await expect(window.locator('.item-list .row-name')).toHaveText('Makita Grinder');
+  await expect(window.getByTestId('item-row')).toHaveCount(1);
+  await expect(window.getByTestId('item-row-name')).toHaveText('Makita Grinder');
 
   await window.getByLabel('Search items').fill('nothing matches this');
   // Scoped to the list: the detail pane shows its own empty state at the same time.
-  await expect(window.locator('.item-list .empty-state')).toContainText('Nothing matches');
+  await expect(window.getByTestId('list-empty')).toContainText('Nothing matches');
 });
 
 test('a custom field appears on the item form and is searchable', async () => {
   await window.getByRole('button', { name: 'Fields' }).click();
   await window.getByLabel('New field name').fill('Serial');
   await window.getByRole('button', { name: 'Add', exact: true }).click();
-  await expect(window.locator('.field-list .key')).toHaveText('serial');
+  await expect(window.getByTestId('field-key')).toHaveText('serial');
 
   await window.getByRole('button', { name: 'Items' }).click();
   await createItem('Tagged thing');
 
-  const serial = window.locator('#field-serial');
+  const serial = window.getByLabel('Serial', { exact: true });
   await expect(serial).toBeVisible();
   await serial.fill('XJ-9000');
   await serial.blur();
 
   await window.getByLabel('Search items').fill('xj-9000');
-  await expect(window.locator('.item-list .row-name')).toHaveText('Tagged thing');
+  await expect(window.getByTestId('item-row-name')).toHaveText('Tagged thing');
 });
 
 test('trashing an item moves its folder and can be undone', async () => {
@@ -314,22 +372,23 @@ test('trashing an item moves its folder and can be undone', async () => {
 
   await window.getByRole('button', { name: 'Move to trash' }).click();
 
-  await expect(window.locator('.toast')).toContainText('moved to the trash');
-  await expect(window.locator('.item-list button.row')).toHaveCount(0);
+  await expect(window.getByTestId('toast')).toContainText('moved to the trash');
+  await expect(window.getByTestId('item-row')).toHaveCount(0);
 
   await window.getByRole('button', { name: 'Trash' }).click();
-  await expect(window.locator('.trash-list .row-name')).toHaveText('Doomed');
+  await expect(window.getByTestId('trash-row-name')).toHaveText('Doomed');
 
   await window.getByRole('button', { name: 'Restore' }).click();
-  await expect(window.locator('.trash-list')).toHaveCount(0);
+  await expect(window.getByTestId('trash-row')).toHaveCount(0);
 
   await window.getByRole('button', { name: 'Items' }).click();
-  await expect(window.locator('.item-list .row-name')).toHaveText('Doomed');
+  await expect(window.getByTestId('item-row-name')).toHaveText('Doomed');
 });
 
 test('the trash explains that nothing was deleted', async () => {
   await window.getByRole('button', { name: 'Trash' }).click();
-  await expect(window.locator('.pane-header')).toContainText('Nothing here has been deleted');
+  await expect(window.getByTestId('pane-title')).toHaveText('Trash');
+  await expect(window.getByText('Nothing here has been deleted')).toBeVisible();
 });
 
 test('an attachment is copied in, and the folder only moves when asked', async () => {
@@ -350,8 +409,8 @@ test('an attachment is copied in, and the folder only moves when asked', async (
   );
 
   await window.reload();
-  await window.locator('.item-list button.row').click();
-  await expect(window.locator('.attachments .filename')).toHaveText('manual.pdf');
+  await window.getByTestId('item-row').click();
+  await expect(window.getByTestId('attachment-name')).toHaveText('manual.pdf');
 
   // The folder keeps the name the item had when it was created. Renaming an
   // item does not move it: the id is the real key, and a stable folder is worth
@@ -364,7 +423,7 @@ test('an attachment is copied in, and the folder only moves when asked', async (
 
   // Bringing the folder in line is an explicit, offered action.
   await window.getByRole('button', { name: 'rename folder to match' }).click();
-  await expect(window.locator('.detail-footer code')).toHaveText('data/bosch-drill');
+  await expect(window.getByTestId('item-folder')).toHaveText('data/bosch-drill');
   expect(existsSync(join(libraryPath, 'data', 'bosch-drill', 'manual.pdf'))).toBe(true);
   expect(existsSync(join(libraryPath, 'data', 'new-item'))).toBe(false);
 
@@ -376,7 +435,7 @@ test('the verify report is clean for a healthy library', async () => {
 
   await window.getByRole('button', { name: 'Settings' }).click();
   await window.getByRole('button', { name: 'Check now' }).click();
-  await expect(window.locator('.report .ok')).toHaveText('Everything matches.');
+  await expect(window.getByTestId('verify-ok')).toHaveText('Everything matches.');
 });
 
 test('the renderer has no access to the machine', async () => {
