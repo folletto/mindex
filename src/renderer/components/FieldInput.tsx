@@ -10,7 +10,6 @@ import { ExternalLink } from 'lucide-react';
 import type { FieldDef, FieldValue } from '@shared/types';
 import { api } from '../state/api.js';
 import { Button, Checkbox, Input, Select, Textarea } from './ui/index.js';
-import { useControlAttributes } from './ui/field-context.js';
 
 interface Props {
   field: FieldDef;
@@ -26,10 +25,6 @@ function textOf(value: FieldValue): string {
 }
 
 export function FieldInput({ field, value, disabled, onChange, onCommit }: Props) {
-  // Input, Textarea and Select read the Field's id themselves. Checkbox does not, so its id and description are
-  // taken from the Field here; without that its label would name nothing.
-  const wiring = useControlAttributes({});
-
   switch (field.type) {
     case 'longtext':
       return (
@@ -68,8 +63,6 @@ export function FieldInput({ field, value, disabled, onChange, onCommit }: Props
     case 'boolean':
       return (
         <Checkbox
-          id={wiring.id}
-          aria-describedby={wiring['aria-describedby']}
           disabled={disabled}
           checked={value === true}
           onCheckedChange={(checked) => {
