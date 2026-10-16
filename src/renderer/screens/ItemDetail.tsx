@@ -399,34 +399,34 @@ export function ItemDetail({ itemId, fields, dataVersion, readOnly, onTrashed, o
               Reveal item folder
             </Button>
           </div>
-        </section>
 
-        <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-          <p
-            title={item.folderPath}
-            className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-text-muted"
-          >
-            <span>Folder:</span>
-            <code data-testid="item-folder" className="font-mono text-text">
-              data/{item.slug}
-            </code>
-            {!folderMatches && (
-              <Button
-                variant="link"
-                size="sm"
-                icon={FolderSync}
-                disabled={readOnly}
-                title="The folder keeps its original name when an item is renamed. This moves it."
-                onClick={() => void renameFolder()}
-              >
-                rename folder to match
-              </Button>
-            )}
-          </p>
-          <Button variant="danger" icon={Trash2} disabled={readOnly} onClick={() => void trash()}>
-            Move to trash
-          </Button>
-        </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
+            <p
+              title={item.folderPath}
+              className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-text-muted"
+            >
+              <span>Folder:</span>
+              <code data-testid="item-folder" className="font-mono text-text">
+                data/{item.slug}
+              </code>
+              {!folderMatches && (
+                <Button
+                  variant="link"
+                  size="sm"
+                  icon={FolderSync}
+                  disabled={readOnly}
+                  title="The folder keeps its original name when an item is renamed. This moves it."
+                  onClick={() => void renameFolder()}
+                >
+                  rename folder to match
+                </Button>
+              )}
+            </p>
+            <Button variant="danger-secondary" icon={Trash2} disabled={readOnly} onClick={() => void trash()}>
+              Move to trash
+            </Button>
+          </div>
+        </section>
       </div>
     </Pane>
   );
