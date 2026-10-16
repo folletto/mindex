@@ -61,7 +61,7 @@ const HEX = /(?<![A-Za-z0-9&-])#(?:[0-9a-f]{8}|[0-9a-f]{6}|[0-9a-f]{4}|[0-9a-f]{
 
 const COLOUR_FUNCTION = /(?<![A-Za-z0-9-])(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\(/i;
 
-/** CSS named colours. transparent and currentColor are not here: they are not palette colours. */
+/** CSS named colours. transparent and currentColor are left out: they take their colour from context, not from a value. */
 const NAMED_COLOURS: ReadonlySet<string> = new Set(
   `aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue blueviolet brown
    burlywood cadetblue chartreuse chocolate coral cornflowerblue cornsilk crimson cyan darkblue darkcyan
@@ -137,7 +137,7 @@ const COLOUR_UTILITIES = [
 /**
  * A declaration value. `property` decides whether a bare colour name counts: in
  * `color: red` it does, in `font-family: Red Hat` it does not. Custom properties
- * are treated as colour-bearing, since a token is usually what a custom property is.
+ * always count: a colour stored in one is a literal outside the token blocks.
  */
 function valueFindings(property: string, value: string): string[] {
   const name = property.trim().toLowerCase();
