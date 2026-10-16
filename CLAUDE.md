@@ -48,6 +48,8 @@ npm run dist         # installers into release/
   `@theme` block in `src/renderer/styles.css` (`bg-bg`, `text-text-muted`), never a literal colour or
   their own `dark:` colour variant. `tests/unit/no-hardcoded-colors.test.ts` enforces it. `legacy.css`
   is the one temporary exception; its allow-list entry goes in the change that deletes the file.
+- **The app follows the OS colour scheme.** Nothing in `src/main` touches `nativeTheme` or sets
+  `themeSource`; `tests/unit/theme-follows-os.test.ts` enforces it.
 - **Only IDs cross IPC.** Main resolves IDs to paths from the DB and checks containment inside the
   library folder (`src/main/paths.ts`) before touching anything.
 - **Transactions never span I/O.** `BEGIN IMMEDIATE` writes contain no filesystem work (they may be
