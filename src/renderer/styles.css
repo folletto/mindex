@@ -1,5 +1,12 @@
+/*
+ * Cascade order. legacy.css is the old stylesheet, still imported until every screen is rebuilt on Tailwind. Its
+ * global rules for button, input and select would beat any utility if they were unlayered, so they sit in the
+ * legacy layer, below the utilities. Deleting the file deletes that layer with it.
+ */
+@layer theme, base, legacy, components, utilities;
+
 @import 'tailwindcss';
-@import './legacy.css';
+@import './legacy.css' layer(legacy);
 
 /*
  * Design tokens. Components use the semantic utilities these generate (bg-bg,
@@ -78,4 +85,9 @@
     color: var(--color-text);
     font-family: var(--font-sans);
   }
+}
+
+/* Drags the window from a hidden macOS title bar. Clickable controls inside it stop receiving clicks. */
+@utility app-drag {
+  -webkit-app-region: drag;
 }
