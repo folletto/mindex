@@ -47,8 +47,6 @@ export function Trash({ dataVersion, readOnly, onRestored }: Props) {
   return (
     <Pane>
       <PaneHeader
-        title="Trash"
-        titleTestId="pane-title"
         description={
           <>
             Each item&rsquo;s folder was moved into <code>deleted/</code>, where it stays until you remove it

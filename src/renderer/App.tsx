@@ -1,6 +1,7 @@
 /**
- * The shell: the navigation rail, which screen is showing, what is selected, and the read-only banner. A deletion
- * offers to undo itself through the toast from useToast, so the shell keeps no toast state of its own.
+ * The shell: the navigation rail, the top bar that names the section, which screen is showing, what is selected, and
+ * the read-only banner. A deletion offers to undo itself through the toast from useToast, so the shell keeps no toast
+ * state of its own.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -9,6 +10,7 @@ import { Package, Plus, Settings as SettingsIcon, SlidersHorizontal, Trash2, typ
 import type { Item, ItemRow, SortDirection, SortKey } from '@shared/types';
 import { api, onMenuCommand } from './state/api.js';
 import { useDataVersion, useDebounced, useFields, useLibraryState } from './state/useLibrary.js';
+import { TopBar } from './components/TopBar.js';
 import { Banner, Button, EmptyState, Pane, useToast } from './components/ui/index.js';
 import { Onboarding } from './screens/Onboarding.js';
 import { ItemList } from './screens/ItemList.js';
@@ -19,11 +21,14 @@ import { Settings } from './screens/Settings.js';
 
 type View = 'items' | 'trash' | 'fields' | 'settings';
 
+/** What each section is called. The top bar shows it, and the rail labels its buttons with it. */
+const TITLES: Record<View, string> = { items: 'Items', trash: 'Trash', fields: 'Fields', settings: 'Settings' };
+
 /** The rail's destinations above Settings. Settings sits apart at the bottom. */
-const RAIL_VIEWS: { view: Exclude<View, 'settings'>; label: string; icon: LucideIcon }[] = [
-  { view: 'items', label: 'Items', icon: Package },
-  { view: 'trash', label: 'Trash', icon: Trash2 },
-  { view: 'fields', label: 'Fields', icon: SlidersHorizontal },
+const RAIL_VIEWS: { view: Exclude<View, 'settings'>; icon: LucideIcon }[] = [
+  { view: 'items', icon: Package },
+  { view: 'trash', icon: Trash2 },
+  { view: 'fields', icon: SlidersHorizontal },
 ];
 
 export function App() {
@@ -141,15 +146,12 @@ export function App() {
       <nav aria-label="Main" className="flex w-40 shrink-0 flex-col border-r border-border bg-bg-sunken">
         {/* macOS hides the title bar: the traffic lights sit on this strip, which also drags the window. */}
         <div className="h-10 shrink-0 app-drag" />
-        <div data-testid="brand" className="px-4 pb-3 text-base font-semibold">
-          Mindex
-        </div>
-        <ul className="flex flex-col gap-0.5 px-2">
+        <ul className="flex flex-col gap-0.5 px-2 pt-3">
           {RAIL_VIEWS.map((entry) => (
             <li key={entry.view}>
               <NavButton
                 icon={entry.icon}
-                label={entry.label}
+                label={TITLES[entry.view]}
                 current={view === entry.view}
                 onSelect={() => setView(entry.view)}
               />
@@ -160,7 +162,7 @@ export function App() {
           <li>
             <NavButton
               icon={SettingsIcon}
-              label="Settings"
+              label={TITLES.settings}
               current={view === 'settings'}
               onSelect={() => setView('settings')}
             />
@@ -169,6 +171,8 @@ export function App() {
       </nav>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <TopBar title={TITLES[view]} />
+
         {readOnly ? (
           <Banner
             tone="warning"

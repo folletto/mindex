@@ -101,11 +101,7 @@ export function Fields({ fields, readOnly, onChanged }: Props) {
 
   return (
     <Pane>
-      <PaneHeader
-        title="Fields"
-        titleTestId="pane-title"
-        description="Fields you add here appear on every item in this library. Renaming a field is free. Changing its type is checked against the values already stored, and refused rather than applied if any would be lost."
-      />
+      <PaneHeader description="Fields you add here appear on every item in this library. Renaming a field is free. Changing its type is checked against the values already stored, and refused rather than applied if any would be lost." />
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex max-w-3xl flex-col gap-8 p-4">

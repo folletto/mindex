@@ -43,7 +43,6 @@
  *   "Nothing here has been deleted"         the trash pane explains that nothing was deleted
  *
  * Test ids (getByTestId):
- *   brand           the "Mindex" wordmark in the navigation
  *   toast           the message after a trash, which says "moved to the trash"
  *   item-row        one button per item in the list
  *   item-row-name   the name shown on an item row
@@ -54,7 +53,7 @@
  *   attachment-name the file name of an attachment on the open item
  *   trash-row       one row per trashed item
  *   trash-row-name  the name shown on a trash row
- *   pane-title      the heading of the Trash, Fields and Settings panes
+ *   pane-title      the top bar's name for the page: Items, Trash, Fields or Settings
  *   field-key       the key shown beside a field on Fields, e.g. "serial"
  *   verify-ok       the "Everything matches." line of a clean verify report
  *
@@ -251,7 +250,7 @@ async function createItem(name: string): Promise<void> {
 }
 
 test('@smoke opens a window and initialises the library folder', async () => {
-  await expect(window.getByTestId('brand')).toHaveText('Mindex');
+  await expect(window.getByTestId('pane-title')).toHaveText('Items');
 
   // The whole data-folder contract, on disk.
   expect(existsSync(join(libraryPath, 'catalogue.db'))).toBe(true);
@@ -351,6 +350,7 @@ test('search filters the list', async () => {
 
 test('a custom field appears on the item form and is searchable', async () => {
   await window.getByRole('button', { name: 'Fields' }).click();
+  await expect(window.getByTestId('pane-title')).toHaveText('Fields');
   await window.getByLabel('New field name').fill('Serial');
   await window.getByRole('button', { name: 'Add', exact: true }).click();
   await expect(window.getByTestId('field-key')).toHaveText('serial');
@@ -434,6 +434,7 @@ test('the verify report is clean for a healthy library', async () => {
   await createItem('Widget');
 
   await window.getByRole('button', { name: 'Settings' }).click();
+  await expect(window.getByTestId('pane-title')).toHaveText('Settings');
   await window.getByRole('button', { name: 'Check now' }).click();
   await expect(window.getByTestId('verify-ok')).toHaveText('Everything matches.');
 });

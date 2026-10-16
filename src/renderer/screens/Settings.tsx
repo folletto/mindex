@@ -11,7 +11,7 @@ import { useEffect, useId, useState, type ReactNode } from 'react';
 import type { JournalMode, LibraryState, VerifyReport } from '@shared/types';
 import { api } from '../state/api.js';
 import { fileSize } from '../components/format.js';
-import { Badge, Banner, Button, Pane, PaneHeader, RadioGroup, RadioItem } from '../components/ui/index.js';
+import { Badge, Banner, Button, Pane, RadioGroup, RadioItem } from '../components/ui/index.js';
 
 interface Props {
   state: LibraryState;
@@ -65,8 +65,6 @@ export function Settings({ state }: Props) {
 
   return (
     <Pane>
-      <PaneHeader title="Settings" titleTestId="pane-title" />
-
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex max-w-2xl flex-col gap-8 p-4">
           {error && <Banner tone="danger">{error}</Banner>}
