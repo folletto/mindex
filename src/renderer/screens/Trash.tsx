@@ -6,10 +6,12 @@
  * the user prunes `deleted/` in Finder or Explorer, deliberately.
  */
 
+import { FolderOpen, RotateCcw, Search, SearchX, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { TrashRow } from '@shared/types';
 import { api } from '../state/api.js';
 import { absoluteTime, relativeTime } from '../components/format.js';
+import { Banner, Button, EmptyState, Input, Pane, PaneHeader } from '../components/ui/index.js';
 
 interface Props {
   dataVersion: number;
@@ -43,54 +45,90 @@ export function Trash({ dataVersion, readOnly, onRestored }: Props) {
   };
 
   return (
-    <section className="pane">
-      <header className="pane-header">
-        <h2 data-testid="pane-title">Trash</h2>
-        <p className="muted">
-          Nothing here has been deleted. Each item&rsquo;s folder was moved into <code>deleted/</code>, where it stays
-          until you remove it yourself.
-        </p>
-      </header>
-
-      <input
-        type="search"
-        className="search"
-        placeholder="Search the trash"
-        value={query}
-        aria-label="Search the trash"
-        onChange={(event) => setQuery(event.target.value)}
+    <Pane>
+      <PaneHeader
+        title="Trash"
+        titleTestId="pane-title"
+        description={
+          <>
+            Each item&rsquo;s folder was moved into <code>deleted/</code>, where it stays until you remove it
+            yourself.
+          </>
+        }
       />
 
-      {error && <p className="error">{error}</p>}
+      <div className="shrink-0 border-b border-border p-3">
+        <div className="relative max-w-sm">
+          <Search
+            aria-hidden="true"
+            className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-text-muted"
+          />
+          <Input
+            type="search"
+            className="pl-8"
+            placeholder="Search the trash"
+            value={query}
+            aria-label="Search the trash"
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
+      </div>
 
-      {rows.length === 0 ? (
-        <p className="empty-state">{query ? 'Nothing matches.' : 'The trash is empty.'}</p>
-      ) : (
-        <ul className="trash-list">
-          {rows.map((row) => (
-            <li key={row.id} data-testid="trash-row">
-              <div>
-                <span className="row-name" data-testid="trash-row-name">
-                  {row.name}
-                </span>
-                <span className="muted" title={absoluteTime(row.deletedAt)}>
-                  {' '}
-                  deleted {relativeTime(row.deletedAt)}
-                </span>
-                {row.deletedPath && <code className="folder">deleted/{row.deletedPath}</code>}
-              </div>
-              <div className="row">
-                <button type="button" disabled={readOnly} onClick={() => void restore(row)}>
-                  Restore
-                </button>
-                <button type="button" className="ghost" onClick={() => void api.items.revealFolder({ id: row.id })}>
-                  Reveal folder
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto flex max-w-3xl flex-col gap-4 p-4">
+          {error && <Banner tone="danger">{error}</Banner>}
+
+          {rows.length === 0 ? (
+            <EmptyState
+              icon={query ? SearchX : Trash2}
+              title={query ? 'Nothing matches.' : 'The trash is empty.'}
+              description={
+                query
+                  ? undefined
+                  : 'Nothing here has been deleted. Trashed items appear here, and you can restore them.'
+              }
+              className="h-auto py-12"
+            />
+          ) : (
+            <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-md border border-border bg-bg-raised">
+              {rows.map((row) => (
+                <li
+                  key={row.id}
+                  data-testid="trash-row"
+                  className="flex flex-wrap items-center justify-between gap-3 px-3 py-2.5"
+                >
+                  <div className="flex min-w-0 flex-col gap-0.5">
+                    <span data-testid="trash-row-name" className="truncate font-medium text-text">
+                      {row.name}
+                    </span>
+                    <span className="text-sm text-text-muted">
+                      deleted{' '}
+                      <time dateTime={row.deletedAt} title={absoluteTime(row.deletedAt)}>
+                        {relativeTime(row.deletedAt)}
+                      </time>
+                    </span>
+                    {row.deletedPath && (
+                      <code className="truncate font-mono text-sm text-text-muted">deleted/{row.deletedPath}</code>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Button icon={RotateCcw} disabled={readOnly} onClick={() => void restore(row)}>
+                      Restore
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      icon={FolderOpen}
+                      onClick={() => void api.items.revealFolder({ id: row.id })}
+                    >
+                      Reveal folder
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </Pane>
   );
 }
