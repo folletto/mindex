@@ -371,6 +371,7 @@ export function ItemDetail({ itemId, fields, dataVersion, readOnly, onTrashed, o
                     size="sm"
                     variant="ghost"
                     icon={FolderSearch}
+                    aria-label={`Reveal ${attachment.filename}`}
                     onClick={() => void api.attachments.reveal({ attachmentId: attachment.id })}
                   >
                     Reveal
@@ -380,6 +381,7 @@ export function ItemDetail({ itemId, fields, dataVersion, readOnly, onTrashed, o
                     variant="ghost"
                     icon={X}
                     disabled={readOnly}
+                    aria-label={`Remove ${attachment.filename}`}
                     title="Removes it from the list and moves the file into deleted/"
                     onClick={() => void removeAttachment(attachment)}
                   >

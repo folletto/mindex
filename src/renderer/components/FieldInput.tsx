@@ -96,6 +96,7 @@ export function FieldInput({ field, value, disabled, onChange, onCommit }: Props
               size="sm"
               variant="ghost"
               icon={ExternalLink}
+              aria-label={`Open ${field.label}`}
               title="Open in your browser"
               onClick={() => void api.app.openExternal(value)}
             >
