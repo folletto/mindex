@@ -1,6 +1,7 @@
 /**
  * The button. Variants describe the action rather than its colour: primary is the one main action in a view,
- * danger is for anything that deletes or discards. The icon is decorative; the children are the name.
+ * danger is for anything that deletes or discards, and danger-secondary is that same action drawn as an outline for
+ * when it sits among ordinary controls. The icon is decorative; the children are the name.
  */
 
 import type { LucideIcon } from 'lucide-react';

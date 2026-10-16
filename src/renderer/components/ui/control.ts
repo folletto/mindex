@@ -3,7 +3,7 @@
  * wherever a control appears. Components compose these rather than restating them.
  */
 
-export type ButtonVariant = 'default' | 'primary' | 'ghost' | 'danger' | 'link';
+export type ButtonVariant = 'default' | 'primary' | 'ghost' | 'danger' | 'danger-secondary' | 'link';
 export type ButtonSize = 'sm' | 'md';
 
 /**
@@ -25,6 +25,8 @@ export const buttonVariants: Record<ButtonVariant, string> = {
   ghost: 'border border-transparent bg-transparent text-text hover:bg-bg-sunken',
   // accent-text is the label colour on any solid fill, so the danger fill uses it as well.
   danger: 'border border-danger bg-danger text-accent-text hover:opacity-90',
+  // The outline form of danger, for a destructive action that sits among ordinary controls rather than in a dialog.
+  'danger-secondary': 'border border-danger bg-bg-raised text-danger hover:bg-bg-sunken',
   // Link is text inside a sentence: no box, so the size's height and padding are dropped, and no border either.
   link: 'h-auto px-0 text-accent underline-offset-2 hover:underline',
 };
