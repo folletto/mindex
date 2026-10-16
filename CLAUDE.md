@@ -22,7 +22,9 @@ src/main/      Electron main: DB handle, filesystem, dialogs
   lock.ts      advisory heartbeat lock for synced folders
 src/preload/   explicit allow-list bridged to the renderer
 src/renderer/  React only — no fs, no path, no Electron (lint-enforced)
-  components/ui/  shared primitives on Radix + colour tokens, imported from its index.ts
+  components/ui/  shared primitives on Radix and Lucide, imported from its index.ts
+  lib/cn.ts       class names merged for the primitives (clsx + tailwind-merge)
+  styles.css      Tailwind v4 entry: colour and font tokens in @theme, dark values under prefers-color-scheme
 src/shared/    types + pure logic used by both sides
 tests/         unit · integration · concurrency · e2e (see below)
 docs/          architecture.md (design rationale) · setup.md (manual config)
@@ -80,7 +82,7 @@ finished, commit it and push** — no need to ask first.
   if the commit made them wrong** — a scope the title no longer covers, a description missing what
   landed, a "for the reviewer" note that has been addressed. Leave them alone when they still hold;
   don't churn the body for a typo fix.
-- *Opening* a PR stays an explicit request; so does merging one.
+- _Opening_ a PR stays an explicit request; so does merging one.
 
 ## Before finishing a change
 
