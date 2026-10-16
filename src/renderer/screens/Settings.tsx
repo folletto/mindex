@@ -63,7 +63,7 @@ export function Settings({ state }: Props) {
   return (
     <section className="pane">
       <header className="pane-header">
-        <h2>Settings</h2>
+        <h2 data-testid="pane-title">Settings</h2>
       </header>
 
       {error && <p className="error">{error}</p>}
@@ -146,7 +146,11 @@ export function Settings({ state }: Props) {
 
         {report && (
           <div className="report">
-            {healthy && <p className="ok">Everything matches.</p>}
+            {healthy && (
+              <p className="ok" data-testid="verify-ok">
+                Everything matches.
+              </p>
+            )}
             <ReportRow label="Folders with no item" items={report.orphanFolders} />
             <ReportRow label="Item folders missing" items={report.missingFolders} />
             <ReportRow label="Files the database expected" items={report.missingFiles.map((f) => f.filename)} />

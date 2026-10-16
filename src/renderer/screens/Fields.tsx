@@ -76,7 +76,7 @@ export function Fields({ fields, readOnly, onChanged }: Props) {
   return (
     <section className="pane">
       <header className="pane-header">
-        <h2>Fields</h2>
+        <h2 data-testid="pane-title">Fields</h2>
         <p className="muted">
           Fields you add here appear on every item in this library. Renaming a field is free. Changing its type is
           checked against the values already stored, and refused rather than applied if any would be lost.
@@ -101,7 +101,9 @@ export function Fields({ fields, readOnly, onChanged }: Props) {
                     void run(() => api.fields.update({ id: field.id, patch: { label: next } }));
                   }}
                 />
-                <code className="key">{field.key}</code>
+                <code className="key" data-testid="field-key">
+                  {field.key}
+                </code>
                 <select
                   value={field.type}
                   disabled={readOnly}
@@ -171,7 +173,9 @@ export function Fields({ fields, readOnly, onChanged }: Props) {
               <li key={field.id}>
                 <div className="field-main">
                   <span>{field.label}</span>
-                  <code className="key">{field.key}</code>
+                  <code className="key" data-testid="field-key">
+                    {field.key}
+                  </code>
                 </div>
                 <div className="row">
                   <button

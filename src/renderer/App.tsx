@@ -137,7 +137,9 @@ export function App() {
   return (
     <div className="app">
       <nav className="sidebar-nav">
-        <span className="brand">Mindex</span>
+        <span className="brand" data-testid="brand">
+          Mindex
+        </span>
         <button type="button" className={view === 'items' ? 'active' : ''} onClick={() => setView('items')}>
           Items
         </button>
@@ -214,7 +216,7 @@ export function App() {
       {view === 'settings' && <Settings state={state} />}
 
       {toast && (
-        <div className="toast" role="status">
+        <div className="toast" role="status" data-testid="toast">
           <span>{toast.message}</span>
           {toast.undo && (
             <button type="button" className="link" onClick={toast.undo}>

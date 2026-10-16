@@ -45,7 +45,7 @@ export function Trash({ dataVersion, readOnly, onRestored }: Props) {
   return (
     <section className="pane">
       <header className="pane-header">
-        <h2>Trash</h2>
+        <h2 data-testid="pane-title">Trash</h2>
         <p className="muted">
           Nothing here has been deleted. Each item&rsquo;s folder was moved into <code>deleted/</code>, where it stays
           until you remove it yourself.
@@ -68,9 +68,11 @@ export function Trash({ dataVersion, readOnly, onRestored }: Props) {
       ) : (
         <ul className="trash-list">
           {rows.map((row) => (
-            <li key={row.id}>
+            <li key={row.id} data-testid="trash-row">
               <div>
-                <span className="row-name">{row.name}</span>
+                <span className="row-name" data-testid="trash-row-name">
+                  {row.name}
+                </span>
                 <span className="muted" title={absoluteTime(row.deletedAt)}>
                   {' '}
                   deleted {relativeTime(row.deletedAt)}

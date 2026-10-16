@@ -220,13 +220,14 @@ export function ItemDetail({ itemId, fields, dataVersion, readOnly, onTrashed, o
       <header className="detail-header">
         <input
           className="title-input"
+          data-testid="item-title"
           value={draft.name}
           disabled={readOnly}
           aria-label="Name"
           onChange={(event) => edit({ name: event.target.value })}
           onBlur={save}
         />
-        <div className="detail-meta">
+        <div className="detail-meta" data-testid="item-meta">
           <span title={absoluteTime(item.updatedAt)}>Updated {relativeTime(item.updatedAt)}</span>
           {item.updatedBy && <span className="muted"> by {item.updatedBy}</span>}
           {saved && <span className="saved">Saved</span>}
@@ -307,6 +308,7 @@ export function ItemDetail({ itemId, fields, dataVersion, readOnly, onTrashed, o
                 <button
                   type="button"
                   className="link filename"
+                  data-testid="attachment-name"
                   onClick={() => void api.attachments.open({ attachmentId: attachment.id })}
                 >
                   {attachment.filename}
@@ -344,7 +346,7 @@ export function ItemDetail({ itemId, fields, dataVersion, readOnly, onTrashed, o
 
       <footer className="detail-footer">
         <p className="muted folder" title={item.folderPath}>
-          Folder: <code>data/{item.slug}</code>
+          Folder: <code data-testid="item-folder">data/{item.slug}</code>
           {!folderMatches && (
             <button
               type="button"

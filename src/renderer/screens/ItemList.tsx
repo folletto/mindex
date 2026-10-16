@@ -55,7 +55,7 @@ export const ItemList = forwardRef<HTMLInputElement, Props>(function ItemList(
       </div>
 
       {items.length === 0 ? (
-        <p className="empty-state">
+        <p className="empty-state" data-testid="list-empty">
           {loading ? 'Loading…' : query ? `Nothing matches “${query}”.` : 'No items yet. Add your first one.'}
         </p>
       ) : (
@@ -67,9 +67,12 @@ export const ItemList = forwardRef<HTMLInputElement, Props>(function ItemList(
                 role="option"
                 aria-selected={item.id === selectedId}
                 className={item.id === selectedId ? 'row selected' : 'row'}
+                data-testid="item-row"
                 onClick={() => onSelect(item.id)}
               >
-                <span className="row-name">{item.name}</span>
+                <span className="row-name" data-testid="item-row-name">
+                  {item.name}
+                </span>
                 <span className="row-meta">
                   {item.manufacturer && <span className="manufacturer">{item.manufacturer}</span>}
                   {item.attachmentCount > 0 && (
