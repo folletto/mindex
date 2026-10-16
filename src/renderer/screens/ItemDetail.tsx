@@ -400,7 +400,7 @@ export function ItemDetail({ itemId, fields, dataVersion, readOnly, onTrashed, o
             </Button>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
+          <div className="flex flex-wrap items-center border-t border-border pt-3">
             <p
               title={item.folderPath}
               className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-text-muted"
@@ -422,11 +422,18 @@ export function ItemDetail({ itemId, fields, dataVersion, readOnly, onTrashed, o
                 </Button>
               )}
             </p>
-            <Button variant="danger-secondary" icon={Trash2} disabled={readOnly} onClick={() => void trash()}>
-              Move to trash
-            </Button>
           </div>
         </section>
+
+        <Button
+          variant="danger-secondary"
+          icon={Trash2}
+          disabled={readOnly}
+          className="self-start"
+          onClick={() => void trash()}
+        >
+          Move to trash
+        </Button>
       </div>
     </Pane>
   );
