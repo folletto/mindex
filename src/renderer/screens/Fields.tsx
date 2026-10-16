@@ -239,8 +239,8 @@ interface FieldRowProps {
 
 /**
  * One active field. The name and the choices are edited in place and saved when the box loses focus or Enter is
- * pressed, so a rename is one write rather than one per keystroke. The inputs are keyed by the stored value: when
- * a save lands and the value changes, the row remounts showing what was stored.
+ * pressed, so a rename is one write rather than one per keystroke. The inputs are uncontrolled and keyed by the
+ * stored value: when a save lands and the value changes, that input remounts showing what was stored.
  */
 function FieldRow({ field, readOnly, first, last, run, onMove, onHide }: FieldRowProps) {
   const choices = (field.options ?? []).join(', ');
