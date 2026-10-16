@@ -118,7 +118,7 @@ export function Settings({ state }: Props) {
           {state.readOnly && (
             <Banner tone="warning">
               <div className="flex flex-col gap-2">
-                <h3 className="text-sm font-semibold text-text">Read-only</h3>
+                <h2 className="text-sm font-semibold text-text">Read-only</h2>
                 <p>{state.readOnlyReason}</p>
                 <div>
                   <Button onClick={() => void api.library.takeOverLock()}>Take over anyway</Button>
@@ -191,9 +191,9 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
   const headingId = useId();
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-3">
-      <h3 id={headingId} className="text-sm font-semibold text-text">
+      <h2 id={headingId} className="text-sm font-semibold text-text">
         {title}
-      </h3>
+      </h2>
       {children}
     </section>
   );

@@ -129,10 +129,10 @@ export function Fields({ fields, readOnly, onChanged }: Props) {
           {archived.length > 0 && (
             <section className="flex flex-col gap-3">
               <div className="flex flex-col gap-1">
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-text">
+                <h2 className="flex items-center gap-2 text-sm font-semibold text-text">
                   Hidden
                   <Badge>{archived.length}</Badge>
-                </h3>
+                </h2>
                 <p className="text-sm text-text-muted">
                   Hidden from item forms. Their values are still stored and still exported.
                 </p>
@@ -175,7 +175,7 @@ export function Fields({ fields, readOnly, onChanged }: Props) {
           )}
 
           <section className="flex flex-col gap-3">
-            <h3 className="text-sm font-semibold text-text">Add a field</h3>
+            <h2 className="text-sm font-semibold text-text">Add a field</h2>
             <div className="flex flex-wrap items-end gap-3">
               <Field label="New field name" className="min-w-48 flex-1">
                 <Input value={label} disabled={readOnly} onChange={(event) => setLabel(event.target.value)} />
