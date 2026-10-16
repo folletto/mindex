@@ -174,12 +174,7 @@ export function App() {
             tone="warning"
             className="rounded-none border-0 border-b"
             action={
-              <Button
-                variant="link"
-                size="sm"
-                className="border border-transparent bg-transparent py-0"
-                onClick={() => setView('settings')}
-              >
+              <Button variant="link" size="sm" className="py-0" onClick={() => setView('settings')}>
                 details
               </Button>
             }
@@ -269,7 +264,7 @@ function NavButton({ icon, label, current, onSelect }: NavButtonProps) {
       icon={icon}
       aria-current={current ? 'page' : undefined}
       onClick={onSelect}
-      className="w-full justify-start border border-transparent bg-transparent px-2.5 hover:bg-bg-raised aria-[current=page]:border-border aria-[current=page]:bg-bg-raised aria-[current=page]:font-semibold"
+      className="w-full justify-start px-2.5 hover:bg-bg-raised aria-[current=page]:border-border aria-[current=page]:bg-bg-raised aria-[current=page]:font-semibold"
     >
       {label}
     </Button>

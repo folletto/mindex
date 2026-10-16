@@ -87,7 +87,7 @@ export function ItemList({
           <IconButton
             icon={ascending ? ArrowUp : ArrowDown}
             label={ascending ? 'Sort ascending' : 'Sort descending'}
-            className="border border-transparent bg-transparent p-0"
+            className="p-0"
             onClick={() => onSortChange(sort, ascending ? 'desc' : 'asc')}
           />
         </div>

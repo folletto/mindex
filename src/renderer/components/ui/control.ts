@@ -21,10 +21,11 @@ export const buttonBase =
 export const buttonVariants: Record<ButtonVariant, string> = {
   default: 'border border-border bg-bg-raised text-text hover:bg-bg-sunken',
   primary: 'border border-accent bg-accent text-accent-text hover:opacity-90',
-  ghost: 'text-text hover:bg-bg-sunken',
+  // No fill or visible outline. The transparent border keeps a ghost the same size as a default button beside it.
+  ghost: 'border border-transparent bg-transparent text-text hover:bg-bg-sunken',
   // accent-text is the label colour on any solid fill, so the danger fill uses it as well.
   danger: 'border border-danger bg-danger text-accent-text hover:opacity-90',
-  // Link is text inside a sentence: no box, so the size's height and padding are dropped.
+  // Link is text inside a sentence: no box, so the size's height and padding are dropped, and no border either.
   link: 'h-auto px-0 text-accent underline-offset-2 hover:underline',
 };
 
