@@ -67,6 +67,7 @@ src/
 │  └─ ipc.ts       # the entire IPC surface, in one readable file
 ├─ preload/     # the typed allow-list the renderer can see
 ├─ renderer/    # React. No fs, no path, no Electron — enforced by lint
+│  └─ components/ui/   # shared primitives: Radix for behaviour, colour tokens for looks
 └─ shared/      # types and pure logic used by both sides
 ```
 

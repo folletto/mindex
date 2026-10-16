@@ -22,6 +22,7 @@ src/main/      Electron main: DB handle, filesystem, dialogs
   lock.ts      advisory heartbeat lock for synced folders
 src/preload/   explicit allow-list bridged to the renderer
 src/renderer/  React only — no fs, no path, no Electron (lint-enforced)
+  components/ui/  shared primitives on Radix + colour tokens, imported from its index.ts
 src/shared/    types + pure logic used by both sides
 tests/         unit · integration · concurrency · e2e (see below)
 docs/          architecture.md (design rationale) · setup.md (manual config)
