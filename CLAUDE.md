@@ -44,6 +44,10 @@ npm run dist         # installers into release/
 - **Renderer stays sandboxed.** No `fs`/`path`/`child_process`/`electron` imports, no `require`,
   no importing `src/main/**`. New capability = new channel in `src/main/ipc.ts` + a line in
   `src/preload/index.ts`. ESLint enforces this; don't work around it.
+- **Renderer paints with colour tokens only.** Components use the utilities generated from the
+  `@theme` block in `src/renderer/styles.css` (`bg-bg`, `text-text-muted`), never a literal colour or
+  their own `dark:` colour variant. `tests/unit/no-hardcoded-colors.test.ts` enforces it. `legacy.css`
+  is the one temporary exception; its allow-list entry goes in the change that deletes the file.
 - **Only IDs cross IPC.** Main resolves IDs to paths from the DB and checks containment inside the
   library folder (`src/main/paths.ts`) before touching anything.
 - **Transactions never span I/O.** `BEGIN IMMEDIATE` writes contain no filesystem work (they may be
